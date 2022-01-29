@@ -46,3 +46,7 @@ vignettes/*.pdf
 
 #Targets directry
 _targets
+
+#directories from NLCD downloads
+*/RAW/*
+*/EXTRACTIONS/*
