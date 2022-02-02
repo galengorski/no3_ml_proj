@@ -50,3 +50,6 @@ _targets
 #directories from NLCD downloads
 */RAW/*
 */EXTRACTIONS/*
+
+#spyder projects
+.spyproject
