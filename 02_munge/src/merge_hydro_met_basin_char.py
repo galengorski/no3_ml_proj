@@ -27,7 +27,7 @@ hydro_data = pd.read_csv('02_munge/out/all_sites_data_bfs.csv',
                          index_col = 'Date')
 sites = hydro_data.site_no.unique()
 
-i = 5
+i = 1
 hydro_data_temp = hydro_data[hydro_data.site_no == sites[i]]
 met_data = pd.read_csv('01_fetch/out/met_data/'+sites[i]+'_met_data.csv',
                        parse_dates = ['date'], index_col = 'date')
@@ -35,6 +35,7 @@ met_data = pd.read_csv('01_fetch/out/met_data/'+sites[i]+'_met_data.csv',
 len(hydro_data_temp) == len(met_data)
 #join met data with hydro data
 hydro_met = hydro_data_temp.join(met_data, how = 'outer')
+hydro_met['nitrate'] = hydro_met['nitrate'].fillna(-999)
 #
 #%%
 #read in basin char data
@@ -55,7 +56,7 @@ basin_char_lc = basin_char.append(land_cover)
 
 site_info = pd.read_csv('01_fetch/out/site_list_220128.csv', dtype = {'site_no':str})
 
-model_input_nc = netCDF4.Dataset('02_munge/out/model_input.nc',mode='w')
+model_input_nc = netCDF4.Dataset('02_munge/out/model_input_01.nc',mode='w')
 model_input_nc.title='Modeling input data'
 
 
@@ -86,20 +87,22 @@ for i, site in enumerate(site_info.site_no.unique()):
     
     #dynamic variables
     date = site.createVariable('Date','f8','time')
-    discharge = site.createVariable('Discharge','i4','time')
-    baseflow = site.createVariable('Baseflow','i4','time')
-    quickflow = site.createVariable('Quickflow','i4','time')
-    nitrate = site.createVariable('Nitrate','i4','time')
-    precip = site.createVariable('Precip','i4','time')
-    tmax = site.createVariable('TempMax','i4','time')
-    tmin = site.createVariable('TempMin','i4','time')
+    discharge = site.createVariable('Discharge','f8','time')
+    baseflow = site.createVariable('Baseflow','f8','time')
+    quickflow = site.createVariable('Quickflow','f8','time')
+    nitrate = site.createVariable('Nitrate','f8','time')
+    precip = site.createVariable('Precip','f8','time')
+    tmax = site.createVariable('TempMax','f8','time')
+    tmin = site.createVariable('TempMin','f8','time')
     
     
     #fill in dynamic data
     date.units = 'hours since 0001-01-01 00:00:00.0'
     date.calendar = 'gregorian'
-    date.range = [datetime.strftime(hydro_met.index.min(), '%Y-%m-%d'), datetime.strftime(hydro_met.index.max(), '%Y-%m-%d')]
     date[:] = date2num(hydro_met.index.to_list(), units=date.units,calendar=date.calendar)
+    date.units = 'hours since 0001-01-01 00:00:00.0'
+    date.calendar = 'gregorian'
+    date.range = [datetime.strftime(hydro_met.index.min(), '%Y-%m-%d'), datetime.strftime(hydro_met.index.max(), '%Y-%m-%d')]
     discharge[:] = hydro_met.discharge
     discharge.units = 'cfs'
     baseflow[:] = hydro_met.baseflow
@@ -120,5 +123,6 @@ for i, site in enumerate(site_info.site_no.unique()):
 model_input_nc.close()
     
 #%%  
-model_input_nc = netCDF4.Dataset('02_munge/out/model_input.nc')
+model_input_nc = netCDF4.Dataset('02_munge/out/model_input_01.nc')
 model_input_nc.groups.keys()
+model_input_nc.close()
