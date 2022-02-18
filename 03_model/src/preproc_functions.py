@@ -68,6 +68,9 @@ def split_norm_combine(data, seq_len, trn_frac, val_frac, test_frac):
     train_norm = (train - train.mean(axis=0)) / train.std(axis=0)
     val_norm = (val - val.mean(axis=0)) / val.std(axis=0)
     test_norm = (test - test.mean(axis=0)) / test.std(axis=0)
+    
+    #dictionary of nitrate means and stds
+    data.Nitrate.mean()
 
     #recombine into single dataframe
     full_data = pd.concat([train_norm, val_norm, test_norm])
@@ -86,6 +89,7 @@ def prepare_data(data, seq_len, nobs_train, nobs_val, nobs_test):
     data_no_nans_seq_len = data_no_nans[data_no_nans.index > data.index[seq_len]]
     
     #split the nitrate data
+    combined_y = data_no_nans_seq_len.Nitrate.to_numpy()
     train_y = data_no_nans_seq_len.Nitrate.iloc[0:nobs_train].to_numpy()
     train_dates = list(data_no_nans_seq_len.Nitrate.iloc[0:nobs_train].index)
     val_y = data_no_nans_seq_len.Nitrate.iloc[nobs_train:(nobs_train+nobs_val)].to_numpy()
@@ -101,6 +105,8 @@ def prepare_data(data, seq_len, nobs_train, nobs_val, nobs_test):
        
     combined = np.empty([nobs, seq_len, data_no_nans.shape[1]])    
     
+    data = data.drop(columns = 'Nitrate')
+    
     for i, curr_idx in enumerate(data_no_nans_seq_len.index):
         date_lst = list(data.index == curr_idx)
         data_date_idx = int(which(date_lst)[0])
@@ -113,7 +119,7 @@ def prepare_data(data, seq_len, nobs_train, nobs_val, nobs_test):
     val_x = combined[nobs_train:(nobs_train+nobs_val),:,:]
     test_x = combined[(nobs_train+nobs_val):(nobs_train+nobs_val+nobs_test),:,:]
     
-    return combined, train_x, val_x, test_x, train_y, val_y, test_y#, train_dates, val_dates, test_dates
+    return combined, train_x, val_x, combined_y, test_x, train_y, val_y, test_y#, train_dates, val_dates, test_dates
 #%%    
 step = []
 step.append(time.time())
@@ -123,6 +129,6 @@ df = df.drop(columns = 'Date')
 data_split, nobs_train, nobs_val, nobs_test = split_norm_combine(df, 365, .5625, .1875, .25)
 step.append(time.time())
 #df_dyn = df.loc[:,'Discharge':'TempMin']
-combined, train_x, val_x, test_x, train_y, val_y, test_y = prepare_data(data_split, 365, nobs_train, nobs_val, nobs_test)
+full_x, train_x, val_x, test_x, full_y, train_y, val_y, test_y = prepare_data(data_split, 365, nobs_train, nobs_val, nobs_test)
 step.append(time.time())
 print(step[1]-step[0], step[2] - step[1], step[3] - step[2]) 
