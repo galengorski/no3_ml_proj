@@ -7,7 +7,6 @@ Created on Sat Jan 29 11:13:26 2022
 """
 
 #import netCDF4
-import datetime as dt
 from datetime import datetime
 import netCDF4
 from netCDF4 import Dataset,num2date,date2num
@@ -28,40 +27,40 @@ hydro_data = pd.read_csv('02_munge/out/all_sites_data_bfs.csv',
 sites = hydro_data.site_no.unique()
 
 i = 1
-hydro_data_temp = hydro_data[hydro_data.site_no == sites[i]]
-met_data = pd.read_csv('01_fetch/out/met_data/'+sites[i]+'_met_data.csv',
-                       parse_dates = ['date'], index_col = 'date')
-#make sure they have the same length
-len(hydro_data_temp) == len(met_data)
-#join met data with hydro data
-hydro_met = hydro_data_temp.join(met_data, how = 'outer')
-hydro_met['nitrate'] = hydro_met['nitrate'].fillna(-999)
-#
-#%%
-#read in basin char data
-basin_char = pd.read_csv('01_fetch/out/basin_char/'+sites[i]+'_basin_char.csv')
-#read in land cover
-land_cover = pd.read_csv('01_fetch/out/nlcd_data/land_cover_'+sites[i]+'.csv', 
-                         header = 0, sep = ' ',
-                         dtype = {'cat':str,
-                                  'value':float})
-#clean up column names
-land_cover['characteristic_id'] = 'NLCD_'+land_cover['cat']
-land_cover['characteristic_value'] = land_cover['value']
-land_cover['percent_nodata'] = np.nan
-land_cover = land_cover[['characteristic_id','characteristic_value','percent_nodata']]
- #merge with basin char
-basin_char_lc = basin_char.append(land_cover)
-#%%
-
 site_info = pd.read_csv('01_fetch/out/site_list_220128.csv', dtype = {'site_no':str})
 
-model_input_nc = netCDF4.Dataset('02_munge/out/model_input_01.nc',mode='w')
+model_input_nc = netCDF4.Dataset('02_munge/out/model_input.nc',mode='w')
 model_input_nc.title='Modeling input data'
 
+for i, single_site in enumerate(sites):
 
-for i, site in enumerate(site_info.site_no.unique()):
-    site = model_input_nc.createGroup(site_info.site_no[i])
+    hydro_data_temp = hydro_data[hydro_data.site_no == single_site]
+    met_data = pd.read_csv('01_fetch/out/met_data/'+single_site+'_met_data.csv',
+                           parse_dates = ['date'], index_col = 'date')
+    #make sure they have the same length
+    len(hydro_data_temp) == len(met_data)
+    #join met data with hydro data
+    hydro_met = hydro_data_temp.join(met_data, how = 'outer')
+    hydro_met['nitrate'] = hydro_met['nitrate'].fillna(-999)
+    #
+    #
+    #read in basin char data
+    basin_char = pd.read_csv('01_fetch/out/basin_char/'+single_site+'_basin_char.csv')
+    #read in land cover
+    land_cover = pd.read_csv('01_fetch/out/nlcd_data/land_cover_'+single_site+'.csv', 
+                             header = 0, sep = ' ',
+                             dtype = {'cat':str,
+                                      'value':float})
+    #clean up column names
+    land_cover['characteristic_id'] = 'NLCD_'+land_cover['cat']
+    land_cover['characteristic_value'] = land_cover['value']
+    land_cover['percent_nodata'] = np.nan
+    land_cover = land_cover[['characteristic_id','characteristic_value','percent_nodata']]
+     #merge with basin char
+    basin_char_lc = basin_char.append(land_cover)
+    #
+    #fill netcdf
+    site = model_input_nc.createGroup(single_site)
     site.site_name = site_info.station_nm[i]
     site.lat_long = [str(site_info.dec_lat_va[i]), str(site_info.dec_long_va[i])]
     site.date_range = [datetime.strftime(hydro_met.index.min(), '%Y-%m-%d'), datetime.strftime(hydro_met.index.max(), '%Y-%m-%d')]
@@ -118,11 +117,11 @@ for i, site in enumerate(site_info.site_no.unique()):
     tmin[:] = hydro_met.tmin
     tmin.units = 'K'
     
-    print(model_input_nc)
+    print(site_info.site_no[i]+' | '+single_site+' | '+site_info.station_nm[i])
     
 model_input_nc.close()
     
 #%%  
-model_input_nc = netCDF4.Dataset('02_munge/out/model_input_01.nc')
-model_input_nc.groups.keys()
-model_input_nc.close()
+# model_input_nc = netCDF4.Dataset('02_munge/out/model_input_01.nc')
+# model_input_nc.groups.keys()
+# model_input_nc.close()

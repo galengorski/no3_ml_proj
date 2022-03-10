@@ -1,0 +1,28 @@
+run_single_site_model.py:
+    # features used for predictions  
+    #'Baseflow', 'Quickflow'
+    #'Nitrate' has got to be in here for now
+    feat_list: ['Nitrate','Quickflow','Baseflow','Precip','TempMax','TempMin']
+    #sequence length
+    seq_len: 365
+    #train fraction
+    trn_frac: 0.5625
+    #validation fraction 
+    val_frac: 0.1875 
+    #testing fraction
+    test_frac: 0.25
+    #number of features used
+    num_features: 5
+    #are static features used
+    static_features: False
+    learning_rate: 0.001
+    num_epochs: 64
+    batch_size: 128
+    #number of layers
+    num_layers: 1
+    #dropout fraction
+    dropout: 0.25
+    #number of cells
+    hidden_size: 20
+    #should data be shuffled
+    shuffle: True
