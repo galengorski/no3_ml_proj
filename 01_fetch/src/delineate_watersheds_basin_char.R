@@ -50,6 +50,7 @@ for (i in 1:nrow(site_data)){
   # basin_char <- get_nldi_characteristics(list(featuresSource = 'nwissite', featureID = paste0('USGS-',site_data$site_no[i])))
   # 
   # #Fertilizer use from https://www.sciencebase.gov/catalog/item/5b9059b4e4b0702d0e80788f
+  # #we'll use the unconditinal estimates fert_uN_mt see intro to report paragraph 5
   # fert_temp <- fertilizer_data %>% 
   #   filter(COMID == as.numeric(test$origin$comid))
   # 

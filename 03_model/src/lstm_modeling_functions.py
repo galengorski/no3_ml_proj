@@ -143,7 +143,7 @@ def run_model(netcdf_loc, config_loc, site_no, station_nm, out_dir):
     #prep data
     df = ppf.xarray_to_df(netcdf_loc, site_no, feat_list)
     data_split, nobs_train, nobs_val, nobs_test, n_means_stds = ppf.split_norm_combine(df, seq_len, trn_frac, val_frac, test_frac)
-    full_x, train_x, val_x, test_x, full_y, train_y, val_y, test_y, train_dates, val_dates, test_dates = ppf.prepare_data(data_split, seq_len, nobs_train, nobs_val, nobs_test)
+    full_x, train_x, val_x, trainval_x, test_x, full_y, train_y, val_y, trainval_y, test_y, train_dates, val_dates, test_dates = ppf.prepare_data(data_split, seq_len, nobs_train, nobs_val, nobs_test)
 
     # set up data splits
     train_dataset = CatchmentDataset(train_x, train_y)
@@ -285,3 +285,65 @@ def run_model(netcdf_loc, config_loc, site_no, station_nm, out_dir):
 
 def unnormalize(pred, mean, std):
     return mean + std * pred
+
+
+#MULTISITE MODEL
+#getting there, need to figure out site indices and nobs per site
+def run_multi_site_model(netcdf_loc, config_loc, site_no_list, station_nm_list, out_dir):
+
+    with open(config_loc) as stream:
+        config = yaml.safe_load(stream)['run_multi_site_model.py']
+        
+    out_path = os.path.join(out_dir,site_no)
+    
+    os.makedirs(out_path, exist_ok = True)
+    
+    seq_len = config['seq_len']
+    trn_frac = config['trn_frac']
+    val_frac = config['val_frac']
+    test_frac = config['test_frac']
+    
+    feat_list = config['feat_list']
+    static_features = config['static_features']
+    feat_list.extend(static_features)
+    num_features = config['num_features']
+    static_features_used = config['static_features_used']
+    learning_rate = config['learning_rate']
+    num_epochs = config['num_epochs']
+    batch_size = config['batch_size']
+    num_layers = config['num_layers']
+    dropout = config['dropout']
+    hidden_size = config['hidden_size']
+    shuffle = config['shuffle']
+    
+    train_data_all_sites = pd.DataFrame()
+    val_data_all_sites = pd.DataFrame()
+    test_data_all_sites = pd.DataFrame()
+    full_data_all_sites = pd.concat([train_data_all_sites,val_data_all_sites,test_data_all_sites])
+    
+    for site_no in site_no_list_short:
+        #convert single site from xarray group to dataframe
+        df = ppf.xarray_to_df(netcdf_loc, site_no, feat_list)
+        #add individual site no
+        df['site_no'] = site_no
+        #split data into train, val, test splits individually by site
+        data_no_nans, train, nobs_train, val, nobs_val, test, nobs_test = ppf.split_multi_site_data(df, seq_len, trn_frac, val_frac, test_frac)
+        
+        #recombine into single dataframe
+        train_data_all_sites = pd.concat([train_data_all_sites, train])
+        val_data_all_sites = pd.concat([val_data_all_sites, val])
+        test_data_all_sites = pd.concat([test_data_all_sites, train])
+        full_data_no_nans_all_sites = pd.concat([full_data_no_nans_all_sites, data_no_nans])
+    
+    #normalize data as a full data set wtih all sites
+    full_data_all_sites = pd.concat([train_data_all_sites,val_data_all_sites,test_data_all_sites])
+    train_norm, val_norm, test_norm, n_means_stds = ppf.normalize_multi_site_data(full_data_all_sites, train_data_all_sites, val_data_all_sites, test_data_all_sites)
+    
+    #split data back up for creating the input sequences
+    for site_no in site_no_list_short:
+        train_single_site = train_norm[train_norm['site_no'] == site_no]
+        val_single_site = val_norm[val_norm['site_no'] == site_no]
+        test_single_site = test_norm[test_norm['site_no'] == site_no]
+        full_data_single_site = pd.concat([train_single_site, val_single_site, test_single_site])
+    
+        full_x, train_x, val_x, test_x, full_y, train_y, val_y, test_y, train_dates, val_dates, test_dates = ppf.prepare_data(full_data_single_site, seq_len, nobs_train, nobs_val, nobs_test)
