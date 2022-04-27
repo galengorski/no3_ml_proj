@@ -1,0 +1,38 @@
+run_multi_site_model.py:
+    # features used for predictions  
+    #'Baseflow', 'Quickflow'
+    #'Nitrate' has got to be in here for now
+    feat_list: ['Nitrate','Baseflow','Quickflow','Precip','TempMax','TempMin']
+    #are static features used
+    static_features_used: True
+    static_features: ['CAT_N97','CAT_CONTACT','CAT_CANALDITCH','CAT_ARTIFICIAL','CAT_BASIN_AREA','CAT_SILTAVE','CAT_CLAYAVE', 'fert_uN_mt',
+                     'NLCD_11', 'NLCD_21', 'NLCD_22', 'NLCD_23', 'NLCD_24', 'NLCD_31', 'NLCD_41', 'NLCD_42', 'NLCD_43',
+                     'NLCD_52', 'NLCD_71', 'NLCD_81', 'NLCD_82', 'NLCD_90', 'NLCD_95']
+    #other potential static features
+    ##'CAT_PET','CAT_BFI','CAT_TILES92','CAT_MIRAD_2012','CAT_STRM_DEN',
+    #'CAT_ROCKTYPE_100','CAT_ROCKTYPE_200','CAT_ROCKTYPE_300','CAT_ROCKTYPE_400','CAT_ROCKTYPE_500','CAT_ROCKTYPE_600'         
+    #sequence length
+    seq_len: 365
+    #train fraction
+    trn_frac: 0.5625
+    #validation fraction 
+    val_frac: 0.1875 
+    #testing fraction
+    test_frac: 0.25
+    #number of features used
+    num_features: 28
+    learning_rate: 0.005
+    num_epochs: 64
+    batch_size: 512
+    #number of layers
+    num_layers: 1
+    #dropout fraction
+    dropout: 0
+    #weight decay for optimizer
+    weight_decay: 0.001
+    #number of cells
+    hidden_size: 20
+    #should data be shuffled
+    shuffle: True
+    #use existing data that has been prepared
+    use_exisiting_data: True

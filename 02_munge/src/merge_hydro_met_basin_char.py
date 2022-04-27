@@ -26,7 +26,7 @@ hydro_data = pd.read_csv('02_munge/out/all_sites_data_bfs.csv',
                          index_col = 'Date')
 sites = hydro_data.site_no.unique()
 
-i = 1
+#i = 1
 site_info = pd.read_csv('01_fetch/out/site_list_220128.csv', dtype = {'site_no':str})
 
 model_input_nc = netCDF4.Dataset('02_munge/out/model_input.nc',mode='w')
@@ -71,11 +71,7 @@ for i, single_site in enumerate(sites):
     time = site.createDimension('time', None)
     basin_char = site.createDimension('basin_char',None)
     
-    #create variables
-    # latitude = site.createVariable('Latitude','f4','lat')
-    # longitude = site.createVariable('Longitude','f4','lon')
-    
-    #static variables
+    #create static variables
     
     for j in range(len(basin_char_lc)):
         var_name = basin_char_lc.iloc[j,0]
