@@ -34,6 +34,32 @@ def xarray_to_df(netcdf_location, site_no, feat_list):
     print(site_no,' data read to dataframe')
     return site_data_df
 
+def xarray_to_df_mod_feat(netcdf_location, site_no, feat_list):
+    '''reads in a single site from the netcdf and '''
+    add_feat = ['fert_uN_mt', 
+                 'NLCD_11', 'NLCD_21', 'NLCD_22', 'NLCD_23', 'NLCD_24', 'NLCD_31', 'NLCD_41', 
+                 'NLCD_42', 'NLCD_43', 'NLCD_52', 'NLCD_71', 'NLCD_81', 'NLCD_82', 'NLCD_90', 'NLCD_95']
+    feat_list.extend(add_feat)
+
+    site_data = xarray.open_dataset(netcdf_location, group = site_no)
+    site_data_df = site_data.to_dataframe()
+    date_time = site_data['Date'].to_index()
+    site_data_df = site_data_df.set_index(date_time[:])
+    site_data_df.loc[site_data_df.Nitrate < 0 , 'Nitrate'] = np.nan 
+    
+    site_data_df['NLCD_DEV'] = site_data_df['NLCD_21']+site_data_df['NLCD_22']+site_data_df['NLCD_23']+site_data_df['NLCD_24']
+    site_data_df['NLCD_FOR'] = site_data_df['NLCD_41']+site_data_df['NLCD_42']+site_data_df['NLCD_43']
+    site_data_df['NLCD_AG'] = site_data_df['NLCD_81']+site_data_df['NLCD_82']
+    site_data_df['NLCD_WTLND'] = site_data_df['NLCD_81']+site_data_df['NLCD_82']
+    site_data_df['fert_uN_mt_kmAg'] = site_data_df['fert_uN_mt']/(site_data_df['NLCD_82']*site_data_df['CAT_BASIN_AREA'])
+    
+    feat_list = [e for e in feat_list if e not in add_feat]
+    
+    site_data_df = site_data_df[feat_list]
+    
+    site_data.close()
+    print(site_no,' data read to dataframe')
+    return site_data_df
 
 def split_norm_combine(data, seq_len, trn_frac, val_frac, test_frac):
     
@@ -244,7 +270,7 @@ def full_prepare_multi_site_data(netcdf_loc, config_loc, site_no_list, station_n
     
     for site_no in site_no_list:
         #convert single site from xarray group to dataframe
-        df = xarray_to_df(netcdf_loc, site_no, feat_list)
+        df = xarray_to_df_mod_feat(netcdf_loc, site_no, feat_list)
         if len(df.columns[df.isna().any()].tolist()) > 0:
             print(site_no+ " nans found:",df.columns[df.isna().any()].tolist())
         #add individual site no
@@ -420,7 +446,7 @@ def full_prepare_single_site_data(netcdf_loc, config_loc, site_no, station_nm, o
         static_features = config['static_features']
         feat_list.extend(static_features)
     
-    df = xarray_to_df(netcdf_loc, site_no, feat_list)
+    df = xarray_to_df_mod_feat(netcdf_loc, site_no, feat_list)
     if len(df.columns[df.isna().any()].tolist()) > 0:
         print(site_no+ " nans found:",df.columns[df.isna().any()].tolist())
     #add individual site no
