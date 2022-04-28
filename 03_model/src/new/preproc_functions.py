@@ -39,7 +39,8 @@ def xarray_to_df_mod_feat(netcdf_location, site_no, feat_list):
     add_feat = ['fert_uN_mt', 
                  'NLCD_11', 'NLCD_21', 'NLCD_22', 'NLCD_23', 'NLCD_24', 'NLCD_31', 'NLCD_41', 
                  'NLCD_42', 'NLCD_43', 'NLCD_52', 'NLCD_71', 'NLCD_81', 'NLCD_82', 'NLCD_90', 'NLCD_95']
-    feat_list.extend(add_feat)
+    feat_list_c = feat_list.copy()
+    feat_list_c.extend(add_feat)
 
     site_data = xarray.open_dataset(netcdf_location, group = site_no)
     site_data_df = site_data.to_dataframe()
@@ -53,9 +54,9 @@ def xarray_to_df_mod_feat(netcdf_location, site_no, feat_list):
     site_data_df['NLCD_WTLND'] = site_data_df['NLCD_81']+site_data_df['NLCD_82']
     site_data_df['fert_uN_mt_kmAg'] = site_data_df['fert_uN_mt']/(site_data_df['NLCD_82']*site_data_df['CAT_BASIN_AREA'])
     
-    feat_list = [e for e in feat_list if e not in add_feat]
+    feat_list_c = [e for e in feat_list_c if e not in add_feat]
     
-    site_data_df = site_data_df[feat_list]
+    site_data_df = site_data_df[feat_list_c]
     
     site_data.close()
     print(site_no,' data read to dataframe')

@@ -6,7 +6,6 @@ Created on Wed Apr 20 16:08:57 2022
 @author: galengorski
 """
 
-import itertools
 import lstm_modeling_functions as lmf
 import pandas as pd
 import os
@@ -20,24 +19,25 @@ site_no_list = site_info.site_no
 station_nm_list = site_info.station_nm
 read_input_data_from_file = False
 input_file_loc = None
-model_run_id = 'Run_09'
+model_run_id = 'Run_13'
 model_run_dir = os.path.join('03_model/out/multi_site',model_run_id)
 train_model = True
 save_results_csv = False
 hp_tune = False
 hp_tune_vals = {}
+multi_site = True
 
 
 
-run_id = os.path.join(model_run_id,  'Rep_3')
-out_dir = os.path.join(model_run_dir,  'Rep_3')
+run_id = os.path.join(model_run_id,  'Rep_00')
+out_dir = os.path.join(model_run_dir,  'Rep_00')
 
-read_input_data_from_file = True
-input_file_loc = os.path.join(model_run_dir,'Rep_0')
+read_input_data_from_file = False
+input_file_loc = os.path.join(model_run_dir,'Rep_00')
 
 lmf.run_multi_site_model_c(netcdf_loc, config_loc, site_no_list, station_nm_list, 
                        read_input_data_from_file, input_file_loc, out_dir, run_id,
-                       train_model)
+                       train_model, multi_site)
 #%% ATTRIBUTES WITH BASEFLOW SEP
 netcdf_loc = '02_munge/out/model_input.nc'
 config_loc = '03_model/multi_site_model_config_baseflowsep.yaml'
@@ -48,22 +48,23 @@ config_loc = '03_model/multi_site_model_config_baseflowsep.yaml'
 #station_nm_list = site_info.station_nm
 read_input_data_from_file = False
 input_file_loc = None
-model_run_id = 'Run_10'
+model_run_id = 'Run_14'
 model_run_dir = os.path.join('03_model/out/multi_site',model_run_id)
 train_model = True
 save_results_csv = False
 hp_tune = False
+multi_site = True
 
 
-run_id = os.path.join(model_run_id, 'Rep_3')
-out_dir = os.path.join(model_run_dir, 'Rep_3')
+run_id = os.path.join(model_run_id, 'Rep_00')
+out_dir = os.path.join(model_run_dir, 'Rep_00')
 read_input_data_from_file = True
-input_file_loc = os.path.join(model_run_dir,'Rep_0')
+input_file_loc = os.path.join(model_run_dir,'Rep_00')
 
 
 lmf.run_multi_site_model_c(netcdf_loc, config_loc, site_no_list, station_nm_list, 
                    read_input_data_from_file, input_file_loc, out_dir, run_id,
-                   train_model)
+                   train_model, multi_site)
 #%% NO ATTRIBUTES NO BASEFLOW SEP
 netcdf_loc = '02_munge/out/model_input.nc'
 config_loc = '03_model/multi_site_model_config_noattr.yaml'

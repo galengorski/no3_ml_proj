@@ -25,9 +25,14 @@ hydro_data = pd.read_csv('02_munge/out/all_sites_data_bfs.csv',
                          parse_dates = ['Date'],
                          index_col = 'Date')
 sites = hydro_data.site_no.unique()
-
 #i = 1
+
+#remove two sites with suspect looking data
 site_info = pd.read_csv('01_fetch/out/site_list_220128.csv', dtype = {'site_no':str})
+site_info = site_info.drop(index = [8,47])
+
+sites = sites[sites != site_info.site_no.iloc[8]]
+sites = sites[sites != site_info.site_no.iloc[14]]
 
 model_input_nc = netCDF4.Dataset('02_munge/out/model_input.nc',mode='w')
 model_input_nc.title='Modeling input data'
@@ -46,18 +51,28 @@ for i, single_site in enumerate(sites):
     #
     #read in basin char data
     basin_char = pd.read_csv('01_fetch/out/basin_char/'+single_site+'_basin_char.csv')
+        #add in lat and long
+    lat_long_df = pd.DataFrame()
+    lat_long_df['characteristic_id'] = ['lat','long']
+    lat_long_df['characteristic_value'] = list(site_info[site_info.site_no == single_site][['dec_lat_va','dec_long_va']].iloc[0])
+    lat_long_df['percent_no_data'] = np.nan
+    #merge with basin char
+    basin_char_ll = basin_char.append(lat_long_df)
+    
     #read in land cover
     land_cover = pd.read_csv('01_fetch/out/nlcd_data/land_cover_'+single_site+'.csv', 
                              header = 0, sep = ' ',
                              dtype = {'cat':str,
                                       'value':float})
+
+    
     #clean up column names
     land_cover['characteristic_id'] = 'NLCD_'+land_cover['cat']
     land_cover['characteristic_value'] = land_cover['value']
     land_cover['percent_nodata'] = np.nan
     land_cover = land_cover[['characteristic_id','characteristic_value','percent_nodata']]
      #merge with basin char
-    basin_char_lc = basin_char.append(land_cover)
+    basin_char_lc = basin_char_ll.append(land_cover)
     #
     #fill netcdf
     site = model_input_nc.createGroup(single_site)
