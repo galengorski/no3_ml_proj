@@ -29,17 +29,20 @@ sites = hydro_data.site_no.unique()
 
 #remove two sites with suspect looking data
 site_info = pd.read_csv('01_fetch/out/site_list_220128.csv', dtype = {'site_no':str})
-site_info = site_info.drop(index = [8,47])
+#site_info = site_info.drop(index = [8,47])
 
-sites = sites[sites != site_info.site_no.iloc[8]]
-sites = sites[sites != site_info.site_no.iloc[14]]
+#sites = sites[sites != site_info.site_no.iloc[8]]
+#sites = sites[sites != site_info.site_no.iloc[14]]
 
-model_input_nc = netCDF4.Dataset('02_munge/out/model_input.nc',mode='w')
+model_input_nc = netCDF4.Dataset('02_munge/out/model_input_rolling.nc',mode='w')
 model_input_nc.title='Modeling input data'
 
 for i, single_site in enumerate(sites):
 
-    hydro_data_temp = hydro_data[hydro_data.site_no == single_site]
+    hydro_data_temp = hydro_data[hydro_data.site_no == single_site].copy()
+    #calculate 7 day moving average
+    hydro_data_temp['nitrate_rolling'] = hydro_data_temp['nitrate'].rolling("7D", min_periods = 3, center=False).mean()
+    hydro_data_temp['nitrate'] = hydro_data_temp['nitrate_rolling']
     met_data = pd.read_csv('01_fetch/out/met_data/'+single_site+'_met_data.csv',
                            parse_dates = ['date'], index_col = 'date')
     #make sure they have the same length
@@ -132,7 +135,3 @@ for i, single_site in enumerate(sites):
     
 model_input_nc.close()
     
-#%%  
-# model_input_nc = netCDF4.Dataset('02_munge/out/model_input_01.nc')
-# model_input_nc.groups.keys()
-# model_input_nc.close()

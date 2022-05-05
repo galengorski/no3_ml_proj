@@ -51,7 +51,7 @@ def xarray_to_df_mod_feat(netcdf_location, site_no, feat_list):
     site_data_df['NLCD_DEV'] = site_data_df['NLCD_21']+site_data_df['NLCD_22']+site_data_df['NLCD_23']+site_data_df['NLCD_24']
     site_data_df['NLCD_FOR'] = site_data_df['NLCD_41']+site_data_df['NLCD_42']+site_data_df['NLCD_43']
     site_data_df['NLCD_AG'] = site_data_df['NLCD_81']+site_data_df['NLCD_82']
-    site_data_df['NLCD_WTLND'] = site_data_df['NLCD_81']+site_data_df['NLCD_82']
+    site_data_df['NLCD_WTLND'] = site_data_df['NLCD_90']+site_data_df['NLCD_95']
     site_data_df['fert_uN_mt_kmAg'] = site_data_df['fert_uN_mt']/(site_data_df['NLCD_82']*site_data_df['CAT_BASIN_AREA'])
     
     feat_list_c = [e for e in feat_list_c if e not in add_feat]
@@ -146,8 +146,8 @@ def normalize_multi_site_data(data, train, val, test):
 
     #normalize sets separately
     train_norm = (train - train.mean(axis=0)) / train.std(axis=0)
-    val_norm = (val - train.mean(axis=0)) / train.std(axis=0)
-    test_norm = (test - train.mean(axis=0)) / train.std(axis=0)
+    val_norm = (val - val.mean(axis=0)) / val.std(axis=0)
+    test_norm = (test - test.mean(axis=0)) / test.std(axis=0)
     
     #add site no back in
     train_norm['site_no'] = train_site_v

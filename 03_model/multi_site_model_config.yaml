@@ -8,7 +8,8 @@ static_features: ['CAT_N97', 'CAT_BASIN_AREA', 'CAT_SILTAVE', 'CAT_CLAYAVE',
                              'CAT_ROCKTYPE_200','CAT_ROCKTYPE_300',
                              'CAT_ROCKTYPE_400','CAT_ROCKTYPE_500','CAT_ROCKTYPE_600',
                              'CAT_LAKEPOND','CAT_STRM_DENS','CAT_SRL55AG',
-                             'NLCD_DEV','NLCD_FOR','NLCD_AG','NLCD_WTLND','fert_uN_mt_kmAg']
+                             'NLCD_DEV','NLCD_FOR','NLCD_AG','NLCD_WTLND','fert_uN_mt_kmAg', 'lat','long']
+#static_features: ['lat','long']
 #other potential static features
 ##'CAT_PET','CAT_BFI','CAT_TILES92','CAT_MIRAD_2012','CAT_STRM_DEN',
 #'CAT_ROCKTYPE_100','CAT_ROCKTYPE_200','CAT_ROCKTYPE_300','CAT_ROCKTYPE_400','CAT_ROCKTYPE_500','CAT_ROCKTYPE_600'         
@@ -21,7 +22,7 @@ val_frac: 0.1875
 #testing fraction
 test_frac: 0.25
 #number of features used
-num_features: 21
+num_features: 23
 learning_rate: 0.005
 num_epochs: 64
 batch_size: 512

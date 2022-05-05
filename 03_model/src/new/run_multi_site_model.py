@@ -11,15 +11,18 @@ import pandas as pd
 import os
 #%% ATTRIBUTES NO BASEFLOW SEP
 netcdf_loc = '02_munge/out/model_input.nc'
-config_loc = '03_model/multi_site_model_config.yaml'
-site_info = pd.read_csv('01_fetch/out/site_list_220128.csv', dtype = {'site_no':str})
-site_info = site_info.drop(index = [8,47])
+config_loc = '03_model/multi_site_model_config_reproduce.yaml'
+#site_info = pd.read_csv('01_fetch/out/site_list_220128.csv', dtype = {'site_no':str})
+#site_info = site_info.drop(index = [8,47])
+site_info = pd.read_csv('../Midwest_USGS/github/WQ_LSTM/07_comparing_nitrate_models/output_data/site_locations.csv',
+                        dtype = {'STAID':str})
+site_no_list = site_info['STAID'].apply(lambda x: x.zfill(8))
 #input file location
-site_no_list = site_info.site_no
-station_nm_list = site_info.station_nm
+#site_no_list = site_info.site_no
+station_nm_list = site_info.STANAME
 read_input_data_from_file = False
 input_file_loc = None
-model_run_id = 'Run_13'
+model_run_id = 'Run_18'
 model_run_dir = os.path.join('03_model/out/multi_site',model_run_id)
 train_model = True
 save_results_csv = False
