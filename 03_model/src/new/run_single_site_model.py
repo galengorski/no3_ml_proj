@@ -11,12 +11,12 @@ import pandas as pd
 import os
 
 #%% ATTRIBUTES NO BASEFLOW SEP
-netcdf_loc = '02_munge/out/model_input.nc'
+netcdf_loc = '02_munge/out/model_input_rolling.nc'
 config_loc = '03_model/single_site_model_config.yaml'
-site_info = pd.read_csv('01_fetch/out/site_list_220128.csv', dtype = {'site_no':str})
+#site_info = pd.read_csv('03_model/out/multi_site/Run_25/Rep_00/AllSitesModelResults.csv')
+site_info = pd.read_csv('01_fetch/out/site_list_220507.csv', dtype = {'site_no':str})
 
-
-model_run_id = 'Run_01'
+model_run_id = 'Run_40'
 model_run_dir = os.path.join('03_model/out/single_site',model_run_id)
 train_model = True
 save_results_csv = False
@@ -24,7 +24,6 @@ hp_tune = False
 hp_tune_vals = {}
 multi_site = False
 
-site_info = site_info.drop(index = [8,47])
 #input file location
 
 run_id = os.path.join(model_run_id,  'Rep_00')

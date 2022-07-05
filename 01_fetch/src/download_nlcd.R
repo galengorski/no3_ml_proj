@@ -19,6 +19,9 @@ library(raster)
 #install.packages("devtools")
 #devtools::install_github("ropensci/FedData")
 library(FedData)
+library(nhdplusTools)
+library(dataRetrieval)
+library(sf)
 #####
 #===================================================================================#
 
@@ -26,6 +29,7 @@ library(FedData)
 site_info <- read_csv('01_fetch/out/site_list_220128.csv') 
 
 for(i in 1:nrow(site_info)){
+print(paste0('fetching ', site_info$station_nm[i], ' | ', site_info$site_no[i], ' | ', i, ' of ', nrow(site_info)))
 nldi_site <- findNLDI(nwis = site_info$site_no[i], find = c('basin'), no_sf = FALSE)
 #nldi_site <- findNLDI(nwis = a, find = c('basin'), no_sf = FALSE)
 
@@ -43,11 +47,13 @@ nlcd_mask <- mask(test_nlcd, basin.rpj, maskValue = NA)
 # mapview(nlcd_mask)+
 #   mapview(nldi_site$basin)
 
-summary <- nlcd_mask@data@values %>% 
-  table()/cellStats(nlcd_mask, stat = 'countNA')
-  
+classes <- nlcd_mask@data@values %>% 
+  table()
+summary <- classes/sum(classes)
+
 summary_tib <- tibble(cat = names(summary), value = unname(summary))
 
+print(summary_tib$value %>% sum())
 #if some of the land cover classes are missing replace add them in with zero coverage
 all_classes <- c("11", "21", "22", "23", "24", "31", "41", "42", "43", "52", "71", "81", "82", "90", "95")
 if(length(summary_tib$cat)<15){

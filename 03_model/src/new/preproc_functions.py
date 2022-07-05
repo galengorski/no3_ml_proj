@@ -36,8 +36,7 @@ def xarray_to_df(netcdf_location, site_no, feat_list):
 
 def xarray_to_df_mod_feat(netcdf_location, site_no, feat_list):
     '''reads in a single site from the netcdf and '''
-    add_feat = ['fert_uN_mt', 
-                 'NLCD_11', 'NLCD_21', 'NLCD_22', 'NLCD_23', 'NLCD_24', 'NLCD_31', 'NLCD_41', 
+    add_feat = ['NLCD_11', 'NLCD_21', 'NLCD_22', 'NLCD_23', 'NLCD_24', 'NLCD_31', 'NLCD_41', 
                  'NLCD_42', 'NLCD_43', 'NLCD_52', 'NLCD_71', 'NLCD_81', 'NLCD_82', 'NLCD_90', 'NLCD_95']
     feat_list_c = feat_list.copy()
     feat_list_c.extend(add_feat)
@@ -52,7 +51,7 @@ def xarray_to_df_mod_feat(netcdf_location, site_no, feat_list):
     site_data_df['NLCD_FOR'] = site_data_df['NLCD_41']+site_data_df['NLCD_42']+site_data_df['NLCD_43']
     site_data_df['NLCD_AG'] = site_data_df['NLCD_81']+site_data_df['NLCD_82']
     site_data_df['NLCD_WTLND'] = site_data_df['NLCD_90']+site_data_df['NLCD_95']
-    site_data_df['fert_uN_mt_kmAg'] = site_data_df['fert_uN_mt']/(site_data_df['NLCD_82']*site_data_df['CAT_BASIN_AREA'])
+    site_data_df['fert_uN_mt_kmAg'] = site_data_df['fert_uN_mt_sqkm']*(site_data_df['NLCD_82']*site_data_df['TOT_BASIN_AREA'])
     
     feat_list_c = [e for e in feat_list_c if e not in add_feat]
     
@@ -83,19 +82,24 @@ def split_norm_combine(data, seq_len, trn_frac, val_frac, test_frac):
     nobs_train = train.Nitrate.dropna().shape[0]
     val = data[start_val_date:end_val_date]
     nobs_val = val.Nitrate.dropna().shape[0]
+    train_val = data[:end_val_date]
+    nobs_train_val = train_val.Nitrate.dropna().shape[0]
     test = data[start_test_date:end_test_date]
     nobs_test = test.Nitrate.dropna().shape[0]
     
     #normalize sets separately
     train_norm = (train - train.mean(axis=0)) / train.std(axis=0)
-    val_norm = (val - val.mean(axis=0)) / val.std(axis=0)
-    test_norm = (test - test.mean(axis=0)) / test.std(axis=0)
+    val_norm = (val - train.mean(axis=0)) / train.std(axis=0)
+    train_val_norm = (train_val - train_val.mean(axis=0)) / train_val.std(axis=0)
+    test_norm = (test - train.mean(axis=0)) / train.std(axis=0)
     
     #dictionary of nitrate means and stds
     n_means_stds = {'full_mean' : data.Nitrate.mean(),
     'full_std' : data.Nitrate.std(),
     'train_mean' : train.Nitrate.mean(),
     'train_std' : train.Nitrate.std(),
+    'train_val_mean': train_val.Nitrate.mean(),
+    'train_val_std': train_val.Nitrate.std(),
     'val_mean' : val.Nitrate.mean(),
     'val_std' : val.Nitrate.std(),
     'test_mean' : test.Nitrate.mean(),
@@ -108,7 +112,7 @@ def split_norm_combine(data, seq_len, trn_frac, val_frac, test_frac):
     
     print('data split and normalized')
     
-    return full_data, nobs_train, nobs_val, nobs_test, n_means_stds, start_train_date, end_train_date, start_val_date, end_val_date, start_test_date, end_test_date
+    return full_data, nobs_train, nobs_val, nobs_train_val, nobs_test, n_means_stds, start_train_date, end_train_date, start_val_date, end_val_date, start_test_date, end_test_date
 
 def split_multi_site_data(data, seq_len, trn_frac, val_frac, test_frac):
     
@@ -129,29 +133,34 @@ def split_multi_site_data(data, seq_len, trn_frac, val_frac, test_frac):
     #split train validate and test splits
     train = data[:end_train_date]
     val = data[start_val_date:end_val_date]
+    train_val = data[:end_val_date]
     test = data[start_test_date:end_test_date]
     
     
-    return data_no_nans, train, val, test, start_train_date, end_train_date, start_val_date, end_val_date, start_test_date, end_test_date
+    return data_no_nans, train, val, train_val, test, start_train_date, end_train_date, start_val_date, end_val_date, start_test_date, end_test_date
 
-def normalize_multi_site_data(data, train, val, test):
+def normalize_multi_site_data(data, train, val, train_val, test):
     train_site_v = train['site_no']
     val_site_v = val['site_no']
+    train_val_site_v = train_val['site_no']
     test_site_v = test['site_no']
     
     #remove site numbers
     train = train.drop(columns = ['site_no'])
     val = val.drop(columns = ['site_no'])
+    train_val = train_val.drop(columns = ['site_no'])
     test = test.drop(columns = ['site_no'])
 
     #normalize sets separately
     train_norm = (train - train.mean(axis=0)) / train.std(axis=0)
-    val_norm = (val - val.mean(axis=0)) / val.std(axis=0)
-    test_norm = (test - test.mean(axis=0)) / test.std(axis=0)
+    val_norm = (val - train.mean(axis=0)) / train.std(axis=0)
+    train_val_norm = (train_val - train_val.mean(axis=0)) / train_val.std(axis=0)
+    test_norm = (test - train.mean(axis=0)) / train.std(axis=0)
     
     #add site no back in
     train_norm['site_no'] = train_site_v
     val_norm['site_no'] = val_site_v
+    train_val_norm['site_no'] = train_val_site_v
     test_norm['site_no'] = test_site_v
     
     #dictionary of nitrate means and stds
@@ -161,10 +170,12 @@ def normalize_multi_site_data(data, train, val, test):
     'train_std' : train.Nitrate.std(),
     'val_mean' : val.Nitrate.mean(),
     'val_std' : val.Nitrate.std(),
+    'train_val_mean': train_val.Nitrate.mean(),
+    'train_val_std': train_val.Nitrate.std(),
     'test_mean' : test.Nitrate.mean(),
     'test_std' : test.Nitrate.std()}
     
-    return train_norm, val_norm, test_norm, n_means_stds
+    return train_norm, val_norm, train_val_norm, test_norm, n_means_stds
 
 
 
@@ -262,10 +273,12 @@ def full_prepare_multi_site_data(netcdf_loc, config_loc, site_no_list, station_n
     
     train_data_all_sites = pd.DataFrame()
     val_data_all_sites = pd.DataFrame()
+    train_val_data_all_sites = pd.DataFrame()
     test_data_all_sites = pd.DataFrame()
     
     train_range = {}
     val_range = {}
+    train_val_range = {}
     test_range = {}
     #full_range = {}
     
@@ -277,11 +290,12 @@ def full_prepare_multi_site_data(netcdf_loc, config_loc, site_no_list, station_n
         #add individual site no
         df['site_no'] = site_no
         #split data into train, val, test splits individually by site
-        data_no_nans, train, val, test, start_train_date, end_train_date, start_val_date, end_val_date, start_test_date, end_test_date = split_multi_site_data(df, seq_len, trn_frac, val_frac, test_frac)
+        data_no_nans, train, val, train_val, test, start_train_date, end_train_date, start_val_date, end_val_date, start_test_date, end_test_date = split_multi_site_data(df, seq_len, trn_frac, val_frac, test_frac)
         #print(nobs_train)
         #recombine into single dataframe
         train_data_all_sites = pd.concat([train_data_all_sites, train])
         val_data_all_sites = pd.concat([val_data_all_sites, val])
+        train_val_data_all_sites = pd.concat([train_val_data_all_sites, train_val])
         test_data_all_sites = pd.concat([test_data_all_sites, test])
         
         train_range[site_no] = {'From':0, 'To':0}
@@ -292,6 +306,10 @@ def full_prepare_multi_site_data(netcdf_loc, config_loc, site_no_list, station_n
         val_range[site_no]['From'] = start_val_date
         val_range[site_no]['To'] = end_val_date
         
+        train_val_range[site_no] = {'From':0, 'To':0}
+        train_val_range[site_no]['From'] = start_train_date
+        train_val_range[site_no]['To'] = end_val_date
+        
         test_range[site_no] = {'From':0, 'To':0}
         test_range[site_no]['From'] = start_test_date
         test_range[site_no]['To'] = end_test_date
@@ -299,7 +317,7 @@ def full_prepare_multi_site_data(netcdf_loc, config_loc, site_no_list, station_n
     
     #normalize data as a full data set wtih all sites
     full_data_all_sites = pd.concat([train_data_all_sites,val_data_all_sites,test_data_all_sites])
-    train_norm, val_norm, test_norm, n_means_stds = normalize_multi_site_data(full_data_all_sites, train_data_all_sites, val_data_all_sites, test_data_all_sites)
+    train_norm, val_norm, train_val_norm, test_norm, n_means_stds = normalize_multi_site_data(full_data_all_sites, train_data_all_sites, val_data_all_sites, train_val_data_all_sites, test_data_all_sites)
     
     #initiate empty tensors for the input data
     train_x = torch.empty((0,seq_len,len(feat_list)-1), dtype=torch.float, device = device)
@@ -310,6 +328,10 @@ def full_prepare_multi_site_data(netcdf_loc, config_loc, site_no_list, station_n
     val_y = torch.empty((0), dtype=torch.float, device = device)
     val_dates = np.empty([0], dtype='datetime64[ns]')
     
+    train_val_x = torch.empty((0,seq_len,len(feat_list)-1), dtype=torch.float, device = device)
+    train_val_y = torch.empty((0), dtype=torch.float, device = device)
+    train_val_dates = np.empty([0], dtype='datetime64[ns]')
+
     test_x = torch.empty((0,seq_len,len(feat_list)-1), dtype=torch.float, device = device)
     test_y = torch.empty((0), dtype=torch.float, device = device)
     test_dates = np.empty([0], dtype='datetime64[ns]')
@@ -325,6 +347,7 @@ def full_prepare_multi_site_data(netcdf_loc, config_loc, site_no_list, station_n
     #so that the data can be split correctly after modelings
     train_indices = {}
     val_indices = {}
+    train_val_indices = {}
     test_indices = {}
     full_indices = {}
 
@@ -333,6 +356,7 @@ def full_prepare_multi_site_data(netcdf_loc, config_loc, site_no_list, station_n
         print(site_no)
         train_single_site = train_norm[train_norm['site_no'] == site_no]
         val_single_site = val_norm[val_norm['site_no'] == site_no]
+        train_val_single_site = train_val_norm[train_val_norm['site_no'] == site_no]
         test_single_site = test_norm[test_norm['site_no'] == site_no]
         
         #create a dirctory for the site
@@ -360,7 +384,7 @@ def full_prepare_multi_site_data(netcdf_loc, config_loc, site_no_list, station_n
         site_start_test_date = test_range[site_no]['From']
         site_end_test_date = test_range[site_no]['To']
         
-        full_x_site, train_x_site, val_x_site, trainval_x_site, test_x_site, full_y_site, train_y_site, val_y_site, trainval_y_site, test_y_site, train_dates_site, val_dates_site, test_dates_site = prepare_data(full_data_single_site, seq_len, site_start_train_date, site_end_train_date, site_start_val_date, site_end_val_date, site_start_test_date, site_end_test_date)
+        full_x_site, train_x_site, val_x_site, train_val_x_site, test_x_site, full_y_site, train_y_site, val_y_site, train_val_y_site, test_y_site, train_dates_site, val_dates_site, test_dates_site = prepare_data(full_data_single_site, seq_len, site_start_train_date, site_end_train_date, site_start_val_date, site_end_val_date, site_start_test_date, site_end_test_date)
         
         #iteratively fill all the tensors by concatenation with their constituent parts
         train_indices[site_no] = {"From":0,"To":0}
@@ -379,6 +403,16 @@ def full_prepare_multi_site_data(netcdf_loc, config_loc, site_no_list, station_n
         val_y = torch.cat((val_y, val_y_site), dim = 0)
         
         val_dates = np.concatenate((val_dates, val_dates_site), axis = 0)
+        
+        #train validation together
+        train_val_indices[site_no] = {"From":0,"To":0}
+        train_val_indices[site_no]["From"] = train_val_x.shape[0]
+        train_val_x = torch.cat((train_val_x, train_val_x_site), dim = 0)
+        train_val_indices[site_no]["To"] = train_val_x.shape[0]
+        train_val_y = torch.cat((train_val_y, train_val_y_site), dim = 0)
+        
+        train_val_dates = np.concatenate((train_val_dates, train_dates_site, val_dates_site), axis = 0)
+
         
         #testing
         test_indices[site_no] = {"From":0,"To":0}
@@ -406,6 +440,10 @@ def full_prepare_multi_site_data(netcdf_loc, config_loc, site_no_list, station_n
     concat_data['val_x'] = val_x
     concat_data['val_y'] = val_y
     concat_data['val_dates'] = val_dates
+    
+    concat_data['train_val_x'] = train_val_x
+    concat_data['train_val_y'] = train_val_y
+    concat_data['train_val_dates'] = train_val_dates
 
     concat_data['test_x'] = test_x
     concat_data['test_y'] = test_y
@@ -419,6 +457,7 @@ def full_prepare_multi_site_data(netcdf_loc, config_loc, site_no_list, station_n
     concat_data['solute_std'] = solute_std
     concat_data['train_indices'] = train_indices
     concat_data['val_indices'] = val_indices
+    concat_data['train_val_indices'] = train_val_indices
     concat_data['test_indices'] = test_indices
     concat_data['full_indices'] = full_indices
     
@@ -452,9 +491,9 @@ def full_prepare_single_site_data(netcdf_loc, config_loc, site_no, station_nm, o
         print(site_no+ " nans found:",df.columns[df.isna().any()].tolist())
     #add individual site no
     #split and normalize input data
-    full_data, nobs_train, nobs_val, nobs_test, n_means_stds, start_train_date, end_train_date, start_val_date, end_val_date, start_test_date, end_test_date = split_norm_combine(df, seq_len, trn_frac, val_frac, test_frac)
+    full_data, nobs_train, nobs_val, nobs_train_val, nobs_test, n_means_stds, start_train_date, end_train_date, start_val_date, end_val_date, start_test_date, end_test_date = split_norm_combine(df, seq_len, trn_frac, val_frac, test_frac)
     #arrange input data into arrays of [data_len, seq_len, num_feat]
-    full_x, train_x, val_x, trainval_x, test_x, full_y, train_y, val_y, trainval_y, test_y, train_dates, val_dates, test_dates = prepare_data(full_data, seq_len, start_train_date, end_train_date, start_val_date, end_val_date, start_test_date, end_test_date)
+    full_x, train_x, val_x, train_val_x, test_x, full_y, train_y, val_y, train_val_y, test_y, train_dates, val_dates, test_dates = prepare_data(full_data, seq_len, start_train_date, end_train_date, start_val_date, end_val_date, start_test_date, end_test_date)
 
     site_data = {}
     site_data['train_x'] = train_x
@@ -464,6 +503,10 @@ def full_prepare_single_site_data(netcdf_loc, config_loc, site_no, station_nm, o
     site_data['val_x'] = val_x
     site_data['val_y'] = val_y
     site_data['val_dates'] = val_dates
+    
+    site_data['train_val_x'] = train_val_x
+    site_data['train_val_y'] = train_val_y
+    site_data['train_val_dates'] = np.concatenate((train_dates, val_dates), axis = 0)
 
     site_data['test_x'] = test_x
     site_data['test_y'] = test_y

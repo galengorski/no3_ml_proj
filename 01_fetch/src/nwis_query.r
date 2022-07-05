@@ -1,8 +1,25 @@
+#===================================================================================#
+# NOTES: This script is for generating a list of sites and pulling nitrate and 
+# discharge data from those sites. There is gap filling and interpolation performed
+# on some of the sites
+#-----------------------------------------------------------------------------------#
+# Galen Gorski                                                                      #
+# ggorski@usgs.gov                                                                  #
+# 2022-03-05                                                                        #  
+#-----------------------------------------------------------------------------------#
+#===================================================================================#
+
+#===================================================================================#
+#####INSTALL PACKAGES#####
 library(tidyverse)
 library(rnoaa) # NOAA GHCND meteorological data queries
 library(dataRetrieval) # USGS NWIS hydrologic data queries
 library(baytrends) # interpolation
 library(padr) # filling in timestamp gaps
+#####
+#===================================================================================#
+
+
 
 end_date <- "2021-12-31" # most recent date we want to analyze. Probably best to leave out at least the past few days, maybe more.
 

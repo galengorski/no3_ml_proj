@@ -1,18 +1,22 @@
 # features used for predictions  
 #'Baseflow', 'Quickflow'
 #'Nitrate' has got to be in here for now
-feat_list: ['Nitrate','Discharge','Precip','TempMax','TempMin']
+feat_list: ['Nitrate','Discharge','Precip','TempMax','TempMin','SolarRad']
 #are static features used
 static_features_used: True
-static_features: ['CAT_N97', 'CAT_BASIN_AREA', 'CAT_SILTAVE', 'CAT_CLAYAVE',
-                             'CAT_ROCKTYPE_200','CAT_ROCKTYPE_300',
-                             'CAT_ROCKTYPE_400','CAT_ROCKTYPE_500','CAT_ROCKTYPE_600',
-                             'CAT_LAKEPOND','CAT_STRM_DENS','CAT_SRL55AG',
-                             'NLCD_DEV','NLCD_FOR','NLCD_AG','NLCD_WTLND','fert_uN_mt_kmAg', 'lat','long']
-#static_features: ['lat','long']
-#other potential static features
-##'CAT_PET','CAT_BFI','CAT_TILES92','CAT_MIRAD_2012','CAT_STRM_DEN',
-#'CAT_ROCKTYPE_100','CAT_ROCKTYPE_200','CAT_ROCKTYPE_300','CAT_ROCKTYPE_400','CAT_ROCKTYPE_500','CAT_ROCKTYPE_600'         
+static_features: ['TOT_BASIN_AREA','TOT_BASIN_SLOPE', 'lat','long',
+                    'TOT_STREAM_SLOPE','TOT_STREAM_LENGTH','TOT_STRM_DENS',
+                    'TOT_CANALDITCH','TOT_ARTIFICIAL',
+                    'TOT_HGA','TOT_HGAD','TOT_HGB','TOT_HGBC','TOT_HGBD',
+                    'TOT_HGC','TOT_HGCD','TOT_HGD',
+                    'TOT_N97',
+                    'TOT_BFI', 'TOT_CONTACT', 'TOT_RECHG', 'TOT_WB5100_ANN', 'TOT_CWD', 'TOT_ET','TOT_RH',
+                    'TOT_TAV7100_ANN', 'TOT_WDANN','TOT_PPT7100_ANN',
+                    'TOT_DITCHES92','TOT_TILES92','TOT_NPDES_MAJ','TOT_NPDES_MAJ_DENS','TOT_NORM_STORAGE2013',
+                    'TOT_LAKEPOND','TOT_RESERVOIR','TOT_SRL55AG',
+                    'DTW','TRANSM','UNSAT_TT','WCON','NO3_DOM','NO3_PUB',
+                    'fert_uN_mt_sqkm',
+                    'NLCD_DEV','NLCD_FOR','NLCD_AG','NLCD_WTLND']
 #sequence length
 seq_len: 365
 #train fraction
@@ -22,7 +26,7 @@ val_frac: 0.1875
 #testing fraction
 test_frac: 0.25
 #number of features used
-num_features: 23
+num_features: 52
 learning_rate: 0.005
 num_epochs: 64
 batch_size: 512
@@ -34,7 +38,7 @@ dropout: 0
 weight_decay: 0.001
 #number of cells
 hidden_size: 20
-#should data be shuffled
+#should input data be shuffled
 shuffle: True
 #use existing data that has been prepared
 use_exisiting_data: True

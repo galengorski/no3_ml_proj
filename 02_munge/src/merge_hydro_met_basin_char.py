@@ -24,15 +24,10 @@ hydro_data = pd.read_csv('02_munge/out/all_sites_data_bfs.csv',
                                   },
                          parse_dates = ['Date'],
                          index_col = 'Date')
-sites = hydro_data.site_no.unique()
-#i = 1
 
 #remove two sites with suspect looking data
-site_info = pd.read_csv('01_fetch/out/site_list_220128.csv', dtype = {'site_no':str})
-#site_info = site_info.drop(index = [8,47])
-
-#sites = sites[sites != site_info.site_no.iloc[8]]
-#sites = sites[sites != site_info.site_no.iloc[14]]
+site_info = pd.read_csv('01_fetch/out/site_list_220507.csv', dtype = {'site_no':str})
+sites = site_info.site_no.unique()
 
 model_input_nc = netCDF4.Dataset('02_munge/out/model_input_rolling.nc',mode='w')
 model_input_nc.title='Modeling input data'
@@ -51,16 +46,22 @@ for i, single_site in enumerate(sites):
     hydro_met = hydro_data_temp.join(met_data, how = 'outer')
     hydro_met['nitrate'] = hydro_met['nitrate'].fillna(-999)
     #
-    #
+    
     #read in basin char data
     basin_char = pd.read_csv('01_fetch/out/basin_char/'+single_site+'_basin_char.csv')
-        #add in lat and long
+    
+    #read in groundwater data
+    gw_char = pd.read_csv('01_fetch/out/gw_char.csv', dtype= {'site_no':str})
+    gw_char_site = gw_char[gw_char['site_no'] == single_site].iloc[:,1:4]
+    basin_char_gw = basin_char.append(gw_char_site)
+    
+    #add in lat and long
     lat_long_df = pd.DataFrame()
     lat_long_df['characteristic_id'] = ['lat','long']
     lat_long_df['characteristic_value'] = list(site_info[site_info.site_no == single_site][['dec_lat_va','dec_long_va']].iloc[0])
     lat_long_df['percent_no_data'] = np.nan
     #merge with basin char
-    basin_char_ll = basin_char.append(lat_long_df)
+    basin_char_ll = basin_char_gw.append(lat_long_df)
     
     #read in land cover
     land_cover = pd.read_csv('01_fetch/out/nlcd_data/land_cover_'+single_site+'.csv', 
@@ -107,6 +108,7 @@ for i, single_site in enumerate(sites):
     precip = site.createVariable('Precip','f8','time')
     tmax = site.createVariable('TempMax','f8','time')
     tmin = site.createVariable('TempMin','f8','time')
+    srad = site.createVariable('SolarRad','f8','time')
     
     
     #fill in dynamic data
@@ -130,6 +132,8 @@ for i, single_site in enumerate(sites):
     tmax.units = 'K'
     tmin[:] = hydro_met.tmin
     tmin.units = 'K'
+    srad[:] = hydro_met.srad
+    srad.units = 'W/m^2'
     
     print(site_info.site_no[i]+' | '+single_site+' | '+site_info.station_nm[i])
     
