@@ -127,16 +127,12 @@ def train_lstm(config_loc, concat_model_data, out_dir, hp_tune, hp_tune_vals):
     
     if hp_tune:
         learning_rate = hp_tune_vals['learning_rate']
-        batch_size = hp_tune_vals['batch_size']
-        dropout = hp_tune_vals['dropout']
-        weight_decay = hp_tune_vals['weight_decay']
+        seq_len = hp_tune_vals['seq_len']
+        num_layers = hp_tune_vals['num_layers']
     else:
         learning_rate = config['learning_rate']
-        batch_size = config['batch_size']
-        dropout = config['dropout']
-        weight_decay = config['weight_decay']
-    
-    seq_len = config['seq_len']
+        seq_len = config['seq_len']
+        num_layers = config['num_layers']
         
     feat_list = config['feat_list']
     if config['static_features_used']:
@@ -146,10 +142,9 @@ def train_lstm(config_loc, concat_model_data, out_dir, hp_tune, hp_tune_vals):
     #static_features_used = config['static_features_used']
     #learning_rate = config['learning_rate']
     num_epochs = config['num_epochs']
-    #batch_size = config['batch_size']
-    #dropout = config['dropout']
-    num_layers = config['num_layers']
-    #weight_decay = config['weight_decay']
+    batch_size = config['batch_size']
+    dropout = config['dropout']
+    weight_decay = config['weight_decay']
     hidden_size = config['hidden_size']
     shuffle = config['shuffle']
 
@@ -210,17 +205,14 @@ def make_predictions_lstm(config_loc, out_dir, concat_model_data, hp_tune, hp_tu
       
     if hp_tune:
         learning_rate = hp_tune_vals['learning_rate']
-        batch_size = hp_tune_vals['batch_size']
-        dropout = hp_tune_vals['dropout']
-        weight_decay = hp_tune_vals['weight_decay']
+        seq_len = hp_tune_vals['seq_len']
+        num_layers = hp_tune_vals['num_layers']
     else:
         learning_rate = config['learning_rate']
-        batch_size = config['batch_size']
-        dropout = config['dropout']
-        weight_decay = config['weight_decay']
+        seq_len = config['seq_len']
+        num_layers = config['num_layers']
 
     
-    seq_len = config['seq_len']
         
     feat_list = config['feat_list']
     if config['static_features_used']:
@@ -229,7 +221,8 @@ def make_predictions_lstm(config_loc, out_dir, concat_model_data, hp_tune, hp_tu
     num_features = config['num_features']
     #static_features_used = config['static_features_used']
     #num_epochs = config['num_epochs']
-    num_layers = config['num_layers']
+    dropout = config['dropout']
+    weight_decay = config['weight_decay']
     
     
     hidden_size = config['hidden_size']
@@ -343,14 +336,12 @@ def save_config(out_path, config_loc, station_nm, site_no, p_train, l_train, p_v
         
     if hp_tune:
         learning_rate = hp_tune_vals['learning_rate']
-        batch_size = hp_tune_vals['batch_size']
-        dropout = hp_tune_vals['dropout']
-        weight_decay = hp_tune_vals['weight_decay']
+        seq_len = hp_tune_vals['seq_len']
+        num_layers = hp_tune_vals['num_layers']
     else:
         learning_rate = config['learning_rate']
-        batch_size = config['batch_size']
-        dropout = config['dropout']
-        weight_decay = config['weight_decay']
+        seq_len = config['seq_len']
+        num_layers = config['num_layers']
     
     rmse_training = he.evaluator(he.rmse, p_train, l_train)
     rmse_validation = he.evaluator(he.rmse, p_val, l_val)
@@ -375,13 +366,14 @@ def save_config(out_path, config_loc, station_nm, site_no, p_train, l_train, p_v
         f.write("Static Feature List: %s\r\n" % config['static_features'])
     f.write("Epochs: %d\r\n" % config['num_epochs'])
     f.write("Learning rate: %f\r\n" % learning_rate)
-    f.write("Batch Size: %d\r\n" % batch_size)
+    f.write("Batch Size: %d\r\n" % config['batch_size'])
     f.write("Training Fraction: %f\r\n" % config['trn_frac'])
     f.write("Validation Fraction: %f\r\n" % config['val_frac'])
-    f.write("Sequence Length: %d\r\n" % config['seq_len'])
+    f.write("Sequence Length: %d\r\n" % seq_len)
     f.write("Cells: %d\r\n" % config['hidden_size'])
-    f.write("Dropout: %f\r\n" % dropout)
-    f.write("Optimizer weight decay: %f\r\n" % weight_decay)
+    f.write("Layers: %d\r\n" % num_layers)
+    f.write("Dropout: %f\r\n" % config['dropout'])
+    f.write("Optimizer weight decay: %f\r\n" % config['weight_decay'])
     f.write("---------RESULTS-------------\n")
     f.write("RMSE_Training: %f\r\n" % rmse_training)
     f.write("RMSE_Validation: %f\r\n" % rmse_validation)
@@ -474,7 +466,7 @@ def run_multi_site_model_c(netcdf_loc, config_loc, site_no_list, station_nm_list
     all_sites_results_df = pd.DataFrame(all_sites_results_list)
     all_sites_results_df.to_csv(os.path.join(out_dir,"AllSitesModelResults.csv"))
     
-def run_single_site_model_c(netcdf_loc, config_loc, site_no, station_nm, read_input_data_from_file, input_file_loc, out_dir, run_id, train_model, multi_site, hp_tune = False, hp_tune_vals = {}, save_results_csv = True):
+def run_single_site_model_c(netcdf_loc, config_loc, site_no, station_nm, read_input_data_from_file, input_file_loc, out_dir, run_id, train_model, multi_site, hp_tune, hp_tune_vals, save_results_csv = True):
     os.makedirs(out_dir, exist_ok = True)
     
     if read_input_data_from_file:
@@ -485,7 +477,7 @@ def run_single_site_model_c(netcdf_loc, config_loc, site_no, station_nm, read_in
             print('Reading input data from '+ out_dir)
     else:         
         #prepare the data
-        site_data, n_means_stds = ppf.full_prepare_single_site_data(netcdf_loc, config_loc, site_no, station_nm, out_dir)
+        site_data, n_means_stds = ppf.full_prepare_single_site_data(netcdf_loc, config_loc, site_no, station_nm, out_dir, hp_tune, hp_tune_vals)
 
     if train_model:  
         train_lstm(config_loc, site_data, out_dir, hp_tune, hp_tune_vals)

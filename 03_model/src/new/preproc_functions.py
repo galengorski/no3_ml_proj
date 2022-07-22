@@ -471,12 +471,16 @@ def full_prepare_multi_site_data(netcdf_loc, config_loc, site_no_list, station_n
 
     return concat_data, n_means_stds
 
-def full_prepare_single_site_data(netcdf_loc, config_loc, site_no, station_nm, out_dir):
+def full_prepare_single_site_data(netcdf_loc, config_loc, site_no, station_nm, out_dir, hp_tune, hp_tune_vals):
     with open(config_loc) as stream:
             config = yaml.safe_load(stream)
     
     
-    seq_len = config['seq_len']
+    if hp_tune:
+        seq_len = hp_tune_vals['seq_len']
+    else:
+        seq_len = config['seq_len']
+
     trn_frac = config['trn_frac']
     val_frac = config['val_frac']
     test_frac = config['test_frac']

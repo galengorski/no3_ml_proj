@@ -11,7 +11,7 @@ static_features_used: False
 ##'CAT_PET','CAT_BFI','CAT_TILES92','CAT_MIRAD_2012','CAT_STRM_DEN',
 #'CAT_ROCKTYPE_100','CAT_ROCKTYPE_200','CAT_ROCKTYPE_300','CAT_ROCKTYPE_400','CAT_ROCKTYPE_500','CAT_ROCKTYPE_600'         
 #sequence length
-seq_len: 365
+seq_len: 60
 #train fraction
 trn_frac: 0.5625
 #validation fraction 
@@ -24,7 +24,7 @@ learning_rate: 0.005
 num_epochs: 64
 batch_size: 512
 #number of layers
-num_layers: 1
+num_layers: 2
 #dropout fraction
 dropout: 0.0
 #weight decay for optimizer
