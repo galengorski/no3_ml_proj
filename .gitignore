@@ -41,6 +41,9 @@ vignettes/*.pdf
 #All model output
 */out/*
 
+#All figures files
+*/fig/*
+
 # local scratch folder
 99_scratch/*
 

@@ -10,8 +10,11 @@ static_features_used: False
 #other potential static features
 ##'CAT_PET','CAT_BFI','CAT_TILES92','CAT_MIRAD_2012','CAT_STRM_DEN',
 #'CAT_ROCKTYPE_100','CAT_ROCKTYPE_200','CAT_ROCKTYPE_300','CAT_ROCKTYPE_400','CAT_ROCKTYPE_500','CAT_ROCKTYPE_600'         
+
+#number of replicates
+reps: 5
 #sequence length
-seq_len: 60
+seq_len: 20
 #train fraction
 trn_frac: 0.5625
 #validation fraction 
@@ -35,3 +38,7 @@ hidden_size: 20
 shuffle: True
 #use existing data that has been prepared
 use_exisiting_data: False
+#when do you want to predict, two options are "train_val" and "full"
+#if "full" is chosen then the model will be trained with the sum of trn_frac
+# and val_frac
+predict_period: 'full'

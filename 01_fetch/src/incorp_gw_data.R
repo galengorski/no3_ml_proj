@@ -33,7 +33,7 @@ dtw <- raster('01_fetch/in/Zell_Sanford/Output_CONUS_trans_dtw/conus_MF6_SS_Unco
 trans <- raster('01_fetch/in/Zell_Sanford/Output_CONUS_trans_dtw/conus_MF6_SS_Unconfined_250_trans.tif')
 wc <- raster('01_fetch/in/Zell_Sanford/Output_CONUS_unsat_watercontent/conus_MF6_SS_Unconfined_250_wc_avg.tif')
 # read in the states boundaries "no water" polygon to clip to
-boundary <- shapefile("01_fetch/in/National_NO3/Inputs//states_merged/states_boundaries_1m_nowater.shp")
+boundary <- shapefile("01_fetch/in/National_NO3/Inputs/states_merged/states_boundaries_1m_nowater.shp")
 dom_no3 <- raster('01_fetch/in/National_NO3/Outputs/published_pred_nitrate_rasters/no3_doms.asc')
 pub_no3 <- raster('01_fetch/in/National_NO3/Outputs/published_pred_nitrate_rasters/no3_pubs.asc')
 crs(dom_no3) <- crs(boundary)

@@ -5,7 +5,7 @@ Created on Fri Feb 18 11:47:03 2022
 
 @author: galengorski
 """
-from datetime import date
+from datetime import date, timedelta
 import hydroeval as he
 import numpy as np
 import pandas as pd
@@ -14,6 +14,7 @@ import math
 import matplotlib.pyplot as plt
 import os
 import pickle
+import scipy
 import seaborn as sns
 import time
 import torch
@@ -21,7 +22,7 @@ import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 import tqdm
 import yaml
-
+#%%
 
 if torch.cuda.is_available():
     dev = "cuda:0"
@@ -149,15 +150,13 @@ def train_lstm(config_loc, concat_model_data, out_dir, hp_tune, hp_tune_vals):
     shuffle = config['shuffle']
 
     # set up data splits
-    train_dataset = CatchmentDataset(concat_model_data['train_x'], concat_model_data['train_y'])
-    val_dataset = CatchmentDataset(concat_model_data['val_x'], concat_model_data['val_y'])
-    #full_dataset = CatchmentDataset(concat_model_data['full_x'], concat_model_data['full_y'])
-
+    if config['predict_period'] == 'full':
+        train_dataset = CatchmentDataset(concat_model_data['train_val_x'], concat_model_data['train_val_y'])
+    else:
+        train_dataset = CatchmentDataset(concat_model_data['train_x'], concat_model_data['train_y'])
     # Load data in batch
     train_loader = DataLoader(dataset = train_dataset, batch_size = batch_size, shuffle=shuffle,drop_last=False, pin_memory=True)
-    #valid_loader = LSTM_helper.DataLoader(dataset = valid_dataset, batch_size = valid_dataset.len, drop_last=True, pin_memory=True)
-    #full_loader = DataLoader(dataset = full_dataset, batch_size = full_dataset.len, drop_last=True, pin_memory=True)
-
+ 
     # initialize the model
     model = LSTM_layer(num_features, hidden_size, seq_len, num_layers, dropout, learning_rate, weight_decay)
     model = model.to(device)
@@ -175,7 +174,10 @@ def train_lstm(config_loc, concat_model_data, out_dir, hp_tune, hp_tune_vals):
                 model.update(sequence, label)         
                 progress_bar.update(1)
         with torch.no_grad():
-            train_loss = model.loss(concat_model_data['train_x'], concat_model_data['train_y'])
+            if config['predict_period'] == 'full':
+                train_loss = model.loss(concat_model_data['train_val_x'], concat_model_data['train_val_y'])
+            else:
+                train_loss = model.loss(concat_model_data['train_x'], concat_model_data['train_y'])
             validation_loss = model.loss(concat_model_data['val_x'], concat_model_data['val_y'])
             print(train_loss.item())
             running_loss.append(train_loss.item())
@@ -223,84 +225,91 @@ def make_predictions_lstm(config_loc, out_dir, concat_model_data, hp_tune, hp_tu
     #num_epochs = config['num_epochs']
     dropout = config['dropout']
     weight_decay = config['weight_decay']
-    
-    
     hidden_size = config['hidden_size']
     #shuffle = config['shuffle']
-    
-    #model = torch.load(weights_dict+"model_weights.pt")
+    predict_period = config['predict_period']
+
     
     model = LSTM_layer(num_features, hidden_size, seq_len, num_layers, dropout, learning_rate, weight_decay)
     model = model.to(device)
     model.load_state_dict(torch.load(os.path.join(out_dir,"model_weights.pt")))
-    # set up data splits
-    train_dataset = CatchmentDataset(concat_model_data['train_x'], concat_model_data['train_y'])
-    val_dataset = CatchmentDataset(concat_model_data['val_x'], concat_model_data['val_y'])
+    
     train_val_dataset = CatchmentDataset(concat_model_data['train_val_x'], concat_model_data['train_val_y'])
-    #full_dataset = CatchmentDataset(concat_model_data['full_x'], concat_model_data['full_y'])
+    full_dataset = CatchmentDataset(concat_model_data['full_x'], concat_model_data['full_y'])
 
-    train_pred, train_label, train_mse = model.report_mse(train_dataset)
-    val_pred, val_label, val_mse = model.report_mse(val_dataset)
-    train_val_pred, train_val_label, train_val_mse = model.report_mse(train_val_dataset)
-    
     lstm_predictions = {}
-    
-    lstm_predictions['train_pred'] = train_pred
-    lstm_predictions['train_label'] = train_label
-    lstm_predictions['val_pred'] = val_pred
-    lstm_predictions['val_label'] = val_label
-    lstm_predictions['train_val_pred'] = train_val_pred
-    lstm_predictions['train_val_label'] = train_val_label
-    
+    if predict_period == 'full':
+        full_pred, full_label, full_mse = model.report_mse(full_dataset)
+        lstm_predictions['full_pred'] = full_pred
+        lstm_predictions['full_label'] = full_label
+    else:
+        train_val_pred, train_val_label, train_val_mse = model.report_mse(train_val_dataset)
+        lstm_predictions['train_val_pred'] = train_val_pred
+        lstm_predictions['train_val_label'] = train_val_label
+
     return lstm_predictions
 
 
+def unnormalize_lstm_prediction(config_loc, lstm_predictions, n_means_stds):
+    with open(config_loc) as stream:
+        config = yaml.safe_load(stream)
+        
+    predict_period = config['predict_period']
+    
+    if predict_period == 'full':
+        pred_un = unnormalize(lstm_predictions['full_pred'], n_means_stds['train_val_mean'], n_means_stds['train_val_std'])
+        label_un = unnormalize(lstm_predictions['full_label'], n_means_stds['train_val_mean'], n_means_stds['train_val_std'])
+    else:
+        pred_un = unnormalize(lstm_predictions['train_val_pred'], n_means_stds['train_val_mean'], n_means_stds['train_val_std'])
+        label_un = unnormalize(lstm_predictions['train_val_label'], n_means_stds['train_val_mean'], n_means_stds['train_val_std'])
+
+    preds_unnorm = {'pred':pred_un,
+                    'label':label_un}
+    
+    return preds_unnorm
 
 
-def save_results(train_pred_un, train_label_un, train_dates, val_pred_un, val_label_un, val_dates, train_val_pred_un, train_val_label_un, train_val_dates,config_loc, out_dir, station_nm, site_no, hp_tune, hp_tune_vals, save_results_csv, run_id, multi_site):
 
+def save_results(config_loc, preds_unnorm, site_data, out_dir, station_nm, site_no, hp_tune, hp_tune_vals, save_results_csv, run_id, multi_site):
+    with open(config_loc) as stream:
+        config = yaml.safe_load(stream)
+        
+    predict_period = config['predict_period']
     
-    #save the predictions
-    #calibing data
-    train_d = {"DateTime": train_dates,
-               "Predicted": train_pred_un,
-               "Labeled": train_label_un,
-               "Training/Validation":np.repeat("Training", len(train_dates)).tolist()}
-    train_df = pd.DataFrame(train_d)
+    if predict_period == 'full':
+        plot_label_set = 'Testing'
+        full_dict = {
+            'DateTime': site_data['full_dates'],
+            "Predicted": preds_unnorm['pred'],
+            "Labeled": preds_unnorm['label'],
+            "Train/Val/Test": np.repeat(np.nan, len(preds_unnorm['pred']))
+            }
+        full_df_long = pd.DataFrame(full_dict)
+        full_df_long = full_df_long.set_index('DateTime')
+        val_start = val_start = site_data['val_dates'][0]
+        full_df_long["Train/Val/Test"] = np.repeat('Training',len(full_df_long[full_df_long.index <= val_start])).tolist()+np.repeat('Testing',len(full_df_long[full_df_long.index > val_start])).tolist()
+    else:
+        plot_label_set = 'Validation'
+        full_dict = {
+            "DateTime": site_data['train_dates'].union(site_data['val_dates']),
+            "Predicted": preds_unnorm['pred'],
+            "Labeled": preds_unnorm['label'],
+            "Train/Val/Test": np.repeat('Training', len(site_data['train_dates'])).tolist()+np.repeat('Validation', len(site_data['val_dates'])).tolist()
+            }
+        full_df_long = pd.DataFrame(full_dict)
+        full_df_long = full_df_long.set_index('DateTime')
+        
+    #only keep the predictions starting at seq_len number of days before the first nitrate observation
+    full_df = full_df_long[full_df_long.index >= (full_df_long['Labeled'].dropna().index[0] - timedelta(days = config['seq_len']))]
     
-    #validation data
-    val_d = {"DateTime": val_dates,
-              "Predicted": val_pred_un,
-              "Labeled": val_label_un,
-              "Training/Validation":np.repeat("Validation", len(val_dates)).tolist()}
-    val_df = pd.DataFrame(val_d)
+    p_val = np.array(full_df[full_df['Train/Val/Test'] != 'Training'].Predicted)
+    l_val = np.array(full_df[full_df['Train/Val/Test'] != 'Training'].Labeled)
     
-    #validation data
-    train_val_d = {"DateTime": train_val_dates,
-              "Train_Val_Predicted": train_val_pred_un}
-    train_val_df = pd.DataFrame(train_val_d)
-    
-    full_df = pd.concat(objs = [train_df, val_df])
-    
-   
-    p_val = np.array(val_d['Predicted'])
-    l_val = np.array(val_d['Labeled'])
-    
-    
-    p_train = np.array(train_d['Predicted'])
-    l_train = np.array(train_d['Labeled'])
-    
-    p_train_val = np.array(train_val_d['Train_Val_Predicted'])
-    l_train_val = np.array(train_val_label_un)
-    
-    site_dict = save_config(out_dir, config_loc, station_nm, site_no, p_train, l_train, p_val, l_val, p_train_val, l_train_val, hp_tune, hp_tune_vals, run_id, multi_site)
-
-    #Save plot of results
-    full_df = full_df.assign(DateTime = pd.to_datetime(full_df.DateTime))
-    #train_val_df = train_val_df.assign(DateTime = pd.to_datetime(train_val_df.DateTime))
-    #train_val_df = train_val_df.drop(columns = 'DateTime')
-    #full_df = full_df.join(train_val_df)
-    
+    p_train = np.array(full_df[full_df['Train/Val/Test'] == 'Training'].Predicted)
+    l_train = np.array(full_df[full_df['Train/Val/Test'] == 'Training'].Labeled)
+        
+    site_dict = save_config(out_dir, config_loc, station_nm, site_no, p_train, l_train, p_val, l_val, hp_tune, hp_tune_vals, run_id, multi_site)
+     
     if save_results_csv:
         if multi_site:
             full_df.to_csv(os.path.join(out_dir,site_no,"ModelResults.csv"))
@@ -313,9 +322,8 @@ def save_results(train_pred_un, train_label_un, train_dates, val_pred_un, val_la
     
     p=sns.lineplot(data = full_df, x = "DateTime", y = "Labeled", label="Observed", color = 'black')
     #ptq
-    sns.lineplot(data = full_df[full_df["Training/Validation"] == "Training"], x = "DateTime", y = "Predicted", color = 'dodgerblue', label = 'Training')
-    sns.lineplot(data = full_df[full_df['Training/Validation'] == "Validation"], x = "DateTime", y = "Predicted", color = 'blue', label = 'Validation')
-    #sns.lineplot(data = full_df, x = 'DateTime', y = 'Train_Val_Predicted', color = 'red', label = 'Training and Validation')
+    sns.lineplot(data = full_df[full_df["Train/Val/Test"] == "Training"], x = "DateTime", y = "Predicted", color = 'dodgerblue', label = 'Training')
+    sns.lineplot(data = full_df[full_df['Train/Val/Test'] != "Training"], x = "DateTime", y = "Predicted", color = 'blue', label = plot_label_set)
     # Set title and labels for axes
     p.set(xlabel="Date",
            ylabel='Nitrate mg/L [NO3+NO2]',
@@ -329,7 +337,7 @@ def save_results(train_pred_un, train_label_un, train_dates, val_pred_un, val_la
     return site_dict
     
 
-def save_config(out_path, config_loc, station_nm, site_no, p_train, l_train, p_val, l_val, p_train_val, l_train_val, hp_tune, hp_tune_vals, run_id, multi_site):
+def save_config(out_path, config_loc, station_nm, site_no, p_train, l_train, p_val, l_val, hp_tune, hp_tune_vals, run_id, multi_site):
     
     with open(config_loc) as stream:
         config = yaml.safe_load(stream)
@@ -345,8 +353,8 @@ def save_config(out_path, config_loc, station_nm, site_no, p_train, l_train, p_v
     
     rmse_training = he.evaluator(he.rmse, p_train, l_train)
     rmse_validation = he.evaluator(he.rmse, p_val, l_val)
-    nrmse_training = he.evaluator(he.rmse, p_train, l_train)/np.mean(l_train)
-    nrmse_validation = he.evaluator(he.rmse, p_val, l_val)/np.mean(l_val)
+    nrmse_training = he.evaluator(he.rmse, p_train, l_train)/np.nanmean(l_train)
+    nrmse_validation = he.evaluator(he.rmse, p_val, l_val)/np.nanmean(l_val)
     nse_training = he.evaluator(he.nse, p_train, l_train)
     nse_validation = he.evaluator(he.nse, p_val, l_val)
     pbias_training = he.evaluator(he.pbias, p_train, l_train)
@@ -369,6 +377,7 @@ def save_config(out_path, config_loc, station_nm, site_no, p_train, l_train, p_v
     f.write("Batch Size: %d\r\n" % config['batch_size'])
     f.write("Training Fraction: %f\r\n" % config['trn_frac'])
     f.write("Validation Fraction: %f\r\n" % config['val_frac'])
+    f.write("Prediction Period: %s\r\n" % config['predict_period'])
     f.write("Sequence Length: %d\r\n" % seq_len)
     f.write("Cells: %d\r\n" % config['hidden_size'])
     f.write("Layers: %d\r\n" % num_layers)
@@ -405,7 +414,9 @@ def unnormalize(pred, mean, std):
 def run_multi_site_model_c(netcdf_loc, config_loc, site_no_list, station_nm_list, read_input_data_from_file, input_file_loc, out_dir, run_id, train_model, multi_site, hp_tune = False, hp_tune_vals = {}, save_results_csv = True):
     
     os.makedirs(out_dir, exist_ok = True)
-       
+    
+    with open(config_loc) as stream:
+        config = yaml.safe_load(stream)       
     
     if read_input_data_from_file:
         with open(os.path.join(input_file_loc,'prepped_data'), 'rb') as input_data:
@@ -422,17 +433,11 @@ def run_multi_site_model_c(netcdf_loc, config_loc, site_no_list, station_nm_list
     
     lstm_predictions = make_predictions_lstm(config_loc, out_dir, concat_model_data, hp_tune, hp_tune_vals)
     
-    train_pred_un = unnormalize(lstm_predictions['train_pred'], n_means_stds['train_mean'], n_means_stds['train_std'])
-    train_label_un = unnormalize(lstm_predictions['train_label'], n_means_stds['train_mean'], n_means_stds['train_std'])
+    preds_unnorm = unnormalize_lstm_prediction(config_loc, lstm_predictions, n_means_stds)
     
-    val_pred_un = unnormalize(lstm_predictions['val_pred'], n_means_stds['train_mean'], n_means_stds['train_std'])
-    val_label_un = unnormalize(lstm_predictions['val_label'], n_means_stds['train_mean'], n_means_stds['train_std'])
-    
-    train_val_pred_un = unnormalize(lstm_predictions['train_val_pred'], n_means_stds['train_val_mean'], n_means_stds['train_val_std'])
-    train_val_label_un = unnormalize(lstm_predictions['train_val_label'], n_means_stds['train_val_mean'], n_means_stds['train_val_std'])
- 
     all_sites_results_list = [] 
- 
+    
+    site_index = 0
     for i,site_no in enumerate(site_no_list):
         station_nm = list(station_nm_list)[i]
         print("Saving "+station_nm)
@@ -442,26 +447,37 @@ def run_multi_site_model_c(netcdf_loc, config_loc, site_no_list, station_nm_list
         site_to_train = concat_model_data['train_indices'][site_no]["To"]
         site_from_val = concat_model_data['val_indices'][site_no]["From"]
         site_to_val = concat_model_data['val_indices'][site_no]["To"]
-        site_from_train_val = concat_model_data['train_val_indices'][site_no]["From"]
-        site_to_train_val = concat_model_data['train_val_indices'][site_no]["To"]
-        #site_from_full = concat_model_data['full_indices'][site]["From"]
-        #site_to_full = concat_model_data['full_indices'][site]["To"]
+        n_train = site_to_train - site_from_train
+        n_val = site_to_val - site_from_val
+        site_from_train_val = concat_model_data['train_val_data_indices_w_nans'][site_no]["From"]
+        site_to_train_val = concat_model_data['train_val_data_indices_w_nans'][site_no]["To"]
+        site_from_full = concat_model_data['full_indices'][site_no]["From"]
+        site_to_full = concat_model_data['full_indices'][site_no]["To"]
         
-        train_pred_site = train_pred_un[site_from_train:site_to_train]
-        train_label_site = train_label_un[site_from_train:site_to_train]
-        val_pred_site = val_pred_un[site_from_val:site_to_val]
-        val_label_site = val_label_un[site_from_val:site_to_val]
-        train_val_pred_site = train_val_pred_un[site_from_train_val:site_to_train_val]
-        train_val_label_site = train_val_label_un[site_from_train_val:site_to_train_val]
+            
+        if config['predict_period'] == 'full':
+            site_preds_unnorm = {
+                'pred':preds_unnorm['pred'][site_from_full:site_to_full],
+                'label':preds_unnorm['label'][site_from_full:site_to_full]
+            }
+        else:
+            site_preds_unnorm = {
+                'pred':preds_unnorm['pred'][site_index:(site_index+n_train+n_val)],
+                'label':preds_unnorm['label'][site_index:(site_index+n_train+n_val)]
+            }
         
-        
-        train_dates = concat_model_data['train_dates'][site_from_train:site_to_train]
-        val_dates = concat_model_data['val_dates'][site_from_val:site_to_val]
-        train_val_dates = concat_model_data['train_val_dates'][site_from_train_val:site_to_train_val]
+        site_data = {
+            'train_dates':pd.to_datetime(concat_model_data['train_dates'][site_from_train:site_to_train]),
+            'val_dates':pd.to_datetime(concat_model_data['val_dates'][site_from_val:site_to_val]),
+            'val_train_dates':pd.to_datetime(concat_model_data['train_val_dates'][site_from_train_val:site_to_train_val]),
+            'full_dates':pd.to_datetime(concat_model_data['full_dates'][site_from_full:site_to_full])
+            }
 
-        site_dict = save_results(train_pred_site, train_label_site, train_dates, val_pred_site, val_label_site, val_dates, train_val_pred_site, train_val_label_site, train_val_dates,config_loc, out_dir, station_nm, site_no, hp_tune, hp_tune_vals, save_results_csv, run_id, multi_site)
+        site_dict = save_results(config_loc, site_preds_unnorm, site_data, out_dir, station_nm, site_no, hp_tune, hp_tune_vals, save_results_csv, run_id, multi_site)
         
         all_sites_results_list.append(site_dict)
+        
+        site_index = site_index+n_train+n_val
     
     all_sites_results_df = pd.DataFrame(all_sites_results_list)
     all_sites_results_df.to_csv(os.path.join(out_dir,"AllSitesModelResults.csv"))
@@ -482,22 +498,10 @@ def run_single_site_model_c(netcdf_loc, config_loc, site_no, station_nm, read_in
     if train_model:  
         train_lstm(config_loc, site_data, out_dir, hp_tune, hp_tune_vals)
     
-    lstm_predictions = make_predictions_lstm(config_loc, out_dir, site_data, hp_tune, hp_tune_vals)
+    lstm_predictions = make_predictions_lstm(config_loc, out_dir, site_data, hp_tune, hp_tune_vals)    
     
-    train_pred_un = unnormalize(lstm_predictions['train_pred'], n_means_stds['train_mean'], n_means_stds['train_std'])
-    train_label_un = unnormalize(lstm_predictions['train_label'], n_means_stds['train_mean'], n_means_stds['train_std'])
-    val_pred_un = unnormalize(lstm_predictions['val_pred'], n_means_stds['train_mean'], n_means_stds['train_std'])
-    val_label_un = unnormalize(lstm_predictions['val_label'], n_means_stds['train_mean'], n_means_stds['train_std'])
-    train_val_pred_un = unnormalize(lstm_predictions['train_val_pred'], n_means_stds['train_val_mean'], n_means_stds['train_val_std'])
-    train_val_label_un = unnormalize(lstm_predictions['train_val_label'], n_means_stds['train_val_mean'], n_means_stds['train_val_std'])
-
-    
-    
-    train_dates = site_data['train_dates']
-    val_dates = site_data['val_dates']
-    train_val_dates = site_data['train_val_dates']
-    
-    site_dict = save_results(train_pred_un, train_label_un, train_dates, val_pred_un, val_label_un, val_dates, train_val_pred_un, train_val_label_un, train_val_dates, config_loc, out_dir, station_nm, site_no, hp_tune, hp_tune_vals, save_results_csv, run_id, multi_site)
-    
+    preds_unnorm = unnormalize_lstm_prediction(config_loc, lstm_predictions, n_means_stds)
+        
+    site_dict = save_results(config_loc, preds_unnorm, site_data, out_dir, station_nm, site_no, hp_tune, hp_tune_vals, save_results_csv, run_id, multi_site)
     return site_dict
 #%%
