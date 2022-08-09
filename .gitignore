@@ -42,7 +42,7 @@ vignettes/*.pdf
 */out/*
 
 #All figures files
-*/fig/*
+*/figs/*
 
 # local scratch folder
 99_scratch/*

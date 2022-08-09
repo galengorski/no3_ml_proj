@@ -45,6 +45,7 @@ for i, single_site in enumerate(sites):
     #join met data with hydro data
     hydro_met = hydro_data_temp.join(met_data, how = 'outer')
     hydro_met['nitrate'] = hydro_met['nitrate'].fillna(-999)
+    #hydro_met['nitrate_rolling'] = hydro_met['nitrate_rolling'].fillna(-999)
     #
     
     #read in basin char data
@@ -55,13 +56,18 @@ for i, single_site in enumerate(sites):
     gw_char_site = gw_char[gw_char['site_no'] == single_site].iloc[:,1:4]
     basin_char_gw = basin_char.append(gw_char_site)
     
+    #read in tile drain data
+    tiles_char = pd.read_csv('01_fetch/out/tile_drain_char.csv', dtype= {'site_no':str})
+    tiles_char_sites = tiles_char[tiles_char['site_no'] == single_site].iloc[:,1:4]
+    basin_char_tiles = basin_char_gw.append(tiles_char_sites)
+    
     #add in lat and long
     lat_long_df = pd.DataFrame()
     lat_long_df['characteristic_id'] = ['lat','long']
     lat_long_df['characteristic_value'] = list(site_info[site_info.site_no == single_site][['dec_lat_va','dec_long_va']].iloc[0])
     lat_long_df['percent_no_data'] = np.nan
     #merge with basin char
-    basin_char_ll = basin_char_gw.append(lat_long_df)
+    basin_char_ll = basin_char_tiles.append(lat_long_df)
     
     #read in land cover
     land_cover = pd.read_csv('01_fetch/out/nlcd_data/land_cover_'+single_site+'.csv', 
@@ -105,6 +111,7 @@ for i, single_site in enumerate(sites):
     baseflow = site.createVariable('Baseflow','f8','time')
     quickflow = site.createVariable('Quickflow','f8','time')
     nitrate = site.createVariable('Nitrate','f8','time')
+    #nitrate_rolling = site.createVariable('Nitrate_rolling', 'f8','time')
     precip = site.createVariable('Precip','f8','time')
     tmax = site.createVariable('TempMax','f8','time')
     tmin = site.createVariable('TempMin','f8','time')
@@ -126,6 +133,8 @@ for i, single_site in enumerate(sites):
     quickflow.units = 'cfs'
     nitrate[:] = hydro_met.nitrate
     nitrate.units = 'mg/L [NO3-NO2]'
+    #nitrate_rolling[:] = hydro_met.nitrate_rolling
+    #nitrate_rolling.units = 'mg/L [NO3-NO2]'
     precip[:] = hydro_met.prcp
     precip.units = 'mm'
     tmax[:] = hydro_met.tmax
