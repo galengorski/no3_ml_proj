@@ -14,7 +14,7 @@ netcdf_loc = '02_munge/out/model_input_rolling.nc'
 config_loc = '03_model/multi_site_model_config.yaml'
 #site_info = pd.read_csv('01_fetch/out/site_list_220507.csv', dtype = {'site_no':str})
 
-site_info = pd.read_csv('04_analysis/out/basin_char_w_clusters_6.csv',  dtype = {'site_no':str})
+site_info = pd.read_csv('01_fetch/out/site_list_220507.csv',  dtype = {'site_no':str})
 site_no_list = site_info.site_no
 station_nm_list = site_info.station_nm
 
@@ -23,7 +23,7 @@ station_nm_list = site_info.station_nm
 #input file location
 read_input_data_from_file = False
 input_file_loc = None
-model_run_id = 'Run_00'
+model_run_id = 'Run_04_DAM'
 model_run_dir = os.path.join('03_model/out/multi_site',model_run_id)
 train_model = True
 save_results_csv = False
@@ -31,8 +31,8 @@ hp_tune = False
 hp_tune_vals = {}
 multi_site = True
 
-for group in site_info.cluster.unique():
-    print(group)
+# for group in site_info.cluster.unique():
+#     print(group)
 
 
 for j in range(5):

@@ -102,10 +102,10 @@ def split_norm_combine(data, seq_len, trn_frac, val_frac, test_frac, config_loc)
     n_obs_test = test.Nitrate.dropna().shape[0]
     
     #normalize sets separately
-    train_norm = (train - train.mean(axis=0)) / train.std(axis=0)
+    train_norm = (train - train_val.mean(axis=0)) / train_val.std(axis=0)
     val_norm = (val - train.mean(axis=0)) / train.std(axis=0)
     train_val_norm = (train_val - train_val.mean(axis=0)) / train_val.std(axis=0)
-    test_norm = (test - train.mean(axis=0)) / train.std(axis=0)
+    test_norm = (test - train_val.mean(axis=0)) / train_val.std(axis=0)
     
     if predict_period == 'full':
         full_norm = pd.concat([train_norm, test_norm])
@@ -184,7 +184,7 @@ def split_multi_site_data(data, seq_len, trn_frac, val_frac, test_frac, config_l
         #recombine into single dataframe
         full = pd.concat([train, val, test])
 
-    #dictionary of normalized datasets
+    #dictionary of non-normalized datasets
     sets = {
     'train': train,
     'val': val,
@@ -210,7 +210,7 @@ def normalize_multi_site_data(data, train, val, train_val, test):
     test = test.drop(columns = ['site_no'])
 
     #normalize sets separately
-    train_norm = (train - train.mean(axis=0)) / train.std(axis=0)
+    train_norm = (train - train_val.mean(axis=0)) / train_val.std(axis=0)
     val_norm = (val - train.mean(axis=0)) / train.std(axis=0)
     train_val_norm = (train_val - train_val.mean(axis=0)) / train_val.std(axis=0)
     test_norm = (test - train_val.mean(axis=0)) / train_val.std(axis=0)
@@ -239,7 +239,6 @@ def normalize_multi_site_data(data, train, val, train_val, test):
 
 def prepare_data(data, seq_len, set_dates):
     '''returns an array with dim [data length, seq_len, num features]'''
-    
     
     start_train_date = set_dates['start_train_date']
     end_train_date = set_dates['end_train_date']
