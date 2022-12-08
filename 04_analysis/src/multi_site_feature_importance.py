@@ -37,7 +37,7 @@ hidden_size = config['hidden_size']
 shuffle = config['shuffle']
 
 #%%
-with open('03_model/out/multi_site/Run_04DAM/Rep_00/prepped_data', 'rb') as input_data:
+with open('03_model/out/multi_site/Run_04_DAM/Rep_00/prepped_data', 'rb') as input_data:
             concat_model_data = pickle.load(input_data)
             
 #prepare the train val dataset
@@ -61,12 +61,12 @@ def calc_permutation_feature_importance(model, concat_model_data, feat_list):
 
 #%%calculate feature importance
 feat_imp_reps = np.zeros([len(feat_list)-1,5])
-for i in range(4):
+for i in range(5):
 # initialize the model
     model = lmf.LSTM_layer(num_features, hidden_size, seq_len, num_layers, dropout, learning_rate, weight_decay)
     model = model.to(device)
     #load the model weights
-    model.load_state_dict(torch.load("03_model/out/multi_site/Run_04DAM/Rep_0"+str(i)+"/model_weights.pt"))
+    model.load_state_dict(torch.load("03_model/out/multi_site/Run_04_DAM/Rep_0"+str(i)+"/model_weights.pt"))
 
     feat_imp = calc_permutation_feature_importance(model, concat_model_data, feat_list)
     

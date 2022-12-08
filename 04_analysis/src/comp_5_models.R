@@ -15,31 +15,34 @@ library(tidyverse)
 #####
 #===================================================================================#
 
-# cl1 <- read_csv('04_analysis/out/cluster_01_ensemble_full_run_summary.csv') %>%
-#   mutate(hydro_terrane = NA, run = 'Clustered_01')
-cl2 <- read_csv('04_analysis/out/cluster_02_ensemble_full_run_summary.csv') %>%
-  mutate(hydro_terrane = NA, run = 'Clustered')
+cl <- read_csv('04_analysis/out/cluster_ensemble_full_run_08_C_summary.csv') %>%
+  mutate(hydro_terrane = NA, run = 'Clustered') %>%
+  rename('lat' = 'PHYS_LAT','long'= 'PHYS_LONG')
 ss <- read_csv('04_analysis/out/single_site_ensemble_run_summary.csv') %>%
-  mutate(hydro_terrane = NA, cluster = cl2$cluster, run = 'Single-site')
-ms <- read_csv('04_analysis/out/multi_site_ensemble_full_run_summary.csv') %>%
-  mutate(hydro_terrane = NA, cluster = cl2$cluster, run = 'Multi-site')
-ht <- read_csv('04_analysis/out/hydro_terrane_ensemble_full_run_summary.csv') %>%
-  mutate(hydro_terrane = cluster, cluster = cl2$cluster, run = 'Hydro terrane')
-#cl1$hydro_terrane <- ht$hydro_terrane
-cl2$hydro_terrane <- ht$hydro_terrane
+  mutate(hydro_terrane = NA, cluster = cl$cluster, run = 'Single-site')
+ms <- read_csv('04_analysis/out/multi_site_ensemble_full_run_MS_07_summary.csv') %>%
+  mutate(hydro_terrane = NA, cluster = cl$cluster, run = 'Multi-site')
+ht <- read_csv('04_analysis/out/hydro_terrane_ensemble_full_run_08_HT_summary.csv') %>%
+  mutate(hydro_terrane = cluster, cluster = cl$cluster, run = 'Hydro terrane') %>%
+  rename('lat' = 'PHYS_LAT','long'= 'PHYS_LONG')
+cl$hydro_terrane <- ht$hydro_terrane
 ss$hydro_terrane <- ht$hydro_terrane
 ms$hydro_terrane <- ht$hydro_terrane
 
 
-all_models <- rbind(ss, ms, cl2, ht) %>%
-  #filter(run != 'Clustered_01') %>%
+all_models <- rbind(ss, ms, cl, ht) %>%
   mutate(run = factor(run, levels = c("Single-site","Clustered","Hydro terrane","Multi-site")))
+
+basin_names <- read_csv('04_analysis/out/basin_char_w_clusters_10.csv') %>% dplyr::select(lat, long,station_nm)
+
+all_models <- left_join(all_models, basin_names, by = c('lat','long'))
 
 
 best_models <- all_models %>%
   group_by(site_no) %>%
-  arrange(desc(Testing_KGE), .by_group = TRUE) %>%
-  summarise(site_no = first(site_no), NSE = first(Testing_NSE), run = first(run), cluster = first(cluster), 
+  arrange(Testing_RMSE, .by_group = TRUE) %>%
+  summarise(site_no = first(site_no), NSE = first(Testing_NSE), NRMSE = first(Testing_NRMSE),
+            run = first(run), cluster = first(cluster), 
             hydro_terrane = first(hydro_terrane),
             lat = first(lat), long = first(long))
 
@@ -70,21 +73,21 @@ best_models_char <- best_models %>%
   left_join(basin_char, by = 'site_no')
 
 par(mfrow = c(2,2))
-for (i in 9:60){
-jpeg(paste0('04_analysis/figs/best_model_drivers/',colnames(best_models_char)[i],'.jpeg'))
-plot(pull(best_models_char[,i]), pull(best_models_char[,'NSE']), pch = 21, bg = best_models_char$color, main = colnames(best_models_char)[i],
-     xlab = colnames(best_models_char)[i], ylab = 'NSE', ylim = c(0,1))  
+for (i in 11:60){
+jpeg(paste0('04_analysis/figs/best_model_drivers/NRMSE/',colnames(best_models_char)[i],'.jpeg'))
+plot(pull(best_models_char[,i]), pull(best_models_char[,'NRMSE']), pch = 21, bg = best_models_char$color, main = colnames(best_models_char)[i],
+     xlab = colnames(best_models_char)[i], ylab = 'NRMSE', cex = 2, ylim = c(0,150))  
 dev.off()
 }
 
 
 #make a time series of the plots where clustered models did better
 cl_sites <- best_models_char %>%
-  filter(run == 'Clustered') %>%
+  #filter(run == 'Clustered') %>%
   dplyr::select(site_no,station_nm,cluster,hydro_terrane)
 
 j = 1
-for (j in 1:6){
+for (j in 1:nrow(cl_sites)){
 rep <- c('Rep_00','Rep_01','Rep_02','Rep_03','Rep_04')
 site <- cl_sites$site_no[j]
 cluster <- cl_sites$cluster[j]
@@ -93,9 +96,9 @@ station_nm <- cl_sites$station_nm[j]
 
 
 #cluster
-cl_ens <- read_csv(file.path('03_model/out/multi_site/Run_04C/Rep_00',paste0('Cluster_',cluster), site,'ModelResults.csv'))
+cl_ens <- read_csv(file.path('03_model/out/multi_site/Run_08_C/Rep_00',paste0('Cluster_',cluster), site,'ModelResults.csv'))
 for(i in 2:length(rep)){
-  temp_rep <- read_csv(file.path('03_model/out/multi_site/Run_04C',rep[i], paste0('Cluster_',cluster), site,'ModelResults.csv'))
+  temp_rep <- read_csv(file.path('03_model/out/multi_site/Run_08_C',rep[i], paste0('Cluster_',cluster), site,'ModelResults.csv'))
   cl_ens[paste0('Predicted_',i)] <- temp_rep$Predicted
 }
 cl <- cl_ens %>%
@@ -121,9 +124,9 @@ ss <- ss_ens %>%
   mutate(Model = 'Single-site')
 
 #multi site
-ms_ens <- read_csv(file.path('03_model/out/multi_site/Run_02/Rep_00', site,'ModelResults.csv'))
+ms_ens <- read_csv(file.path('03_model/out/multi_site/Run_07_MS/Rep_00', site,'ModelResults.csv'))
 for(i in 2:length(rep)){
-  temp_rep <- read_csv(file.path('03_model/out/multi_site/Run_02',rep[i], site,'ModelResults.csv'))
+  temp_rep <- read_csv(file.path('03_model/out/multi_site/Run_07_MS',rep[i], site,'ModelResults.csv'))
   ms_ens[paste0('Predicted_',i)] <- temp_rep$Predicted
 }
 ms <- ms_ens %>%
@@ -135,9 +138,9 @@ ms <- ms_ens %>%
   mutate(Model = 'Multi-site')
 
 #hydro_terrane
-ht_ens <- read_csv(file.path('03_model/out/multi_site/Run_05HT/Rep_00',paste0('Terrane_',hydro_terrane), site,'ModelResults.csv'))
+ht_ens <- read_csv(file.path('03_model/out/multi_site/Run_08_HT/Rep_00',paste0('Terrane_',hydro_terrane), site,'ModelResults.csv'))
 for(i in 2:length(rep)){
-  temp_rep <- read_csv(file.path('03_model/out/multi_site/Run_05HT',rep[i],paste0('Terrane_',hydro_terrane), site,'ModelResults.csv'))
+  temp_rep <- read_csv(file.path('03_model/out/multi_site/Run_08_HT',rep[i],paste0('Terrane_',hydro_terrane), site,'ModelResults.csv'))
   ht_ens[paste0('Predicted_',i)] <- temp_rep$Predicted
 }
 ht <- ht_ens %>%
@@ -148,7 +151,7 @@ ht <- ht_ens %>%
   dplyr::select(!Predicted:Predicted_5) %>%
   mutate(Model = 'Hydro terrane')
 
-g_ss <- rbind(ss %>%
+all_ts <- rbind(ss %>%
                 filter(`Train/Val/Test` == 'Testing') %>%
                 dplyr::select(DateTime,Labeled) %>%
                 mutate(Set = 'Observed') %>%
@@ -166,7 +169,8 @@ g_ss <- rbind(ss %>%
                 filter(`Train/Val/Test` == 'Testing') %>%
                 dplyr::select(DateTime,Preds,Model)
 ) %>%
-  as_tibble() %>%
+  as_tibble()
+g_ss <- all_ts %>%
   mutate(Model = factor(Model, levels = c('Observed',"Single-site","Clustered","Hydro terrane","Multi-site"))) %>%
   ggplot(aes(x = DateTime, y = Preds, color = Model))+
   geom_line()+
@@ -176,8 +180,23 @@ g_ss <- rbind(ss %>%
   xlab('')+
   #geom_vline(xintercept = ss[ss$`Train/Val/Test` == 'Testing',]$DateTime[1])+
   ggtitle(paste0(station_nm,' | Cluster ', cluster,' | Hydro Terrane ',hydro_terrane))+
-  theme(legend.position="none")
+  theme(legend.position="none",
+  panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
+cdf <- all_ts %>%
+  filter(!is.na(Preds)) %>%
+  mutate(Model = factor(Model, levels = c('Observed',"Single-site","Clustered","Hydro terrane","Multi-site"))) %>%
+  group_by(Model) %>%
+  arrange(Preds) %>%
+  mutate(idx = row_number(Model)/sum(!is.na(Preds))) %>%
+  ggplot(aes(y = idx, x = Preds, col = Model))+
+  geom_line()+
+  theme_bw()+
+  scale_color_manual(values = c('black','#00bbf9','#ff595e','#ffca3a','#00f5d4'))+
+  ylab('CDF')+
+  xlab('[NO3-N] (mg/L)')+
+  theme(legend.position="none",
+  panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
 rmse_bpl <- all_models %>%
   filter(site_no == site) %>%
@@ -186,9 +205,76 @@ rmse_bpl <- all_models %>%
   geom_bar(stat = 'identity', color = 'black')+
   scale_fill_manual(values = c('#00bbf9','#ff595e','#ffca3a','#00f5d4'))+
   theme_bw()+
-  ylab('RMSE (mg/L)')
+  ylab('RMSE (mg/L)')+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
-layout <- matrix(c(1,1,2))
-gridExtra::grid.arrange(g_ss, rmse_bpl, layout_matrix = layout)
+pdf(paste0('04_analysis/figs/site_summary/',station_nm,'.pdf'), height = 7, width = 10)
+layout <- as.matrix(cbind(c(1,1,2), c(1,1,3)))
+gridExtra::grid.arrange(g_ss, cdf, rmse_bpl, layout_matrix = layout)
+dev.off()
 }
+
+
+##########
+#Compare where multi-site models are doing better
+best_non_ss_models <- all_models %>%
+  filter(run != 'Single-site') %>%
+  group_by(site_no) %>%
+  arrange(Testing_RMSE, .by_group = TRUE) %>%
+  summarise(site_no = first(site_no), NSE = first(Testing_NSE), NRMSE = first(Testing_NRMSE),
+            run = first(run), cluster = first(cluster), 
+            hydro_terrane = first(hydro_terrane),
+            lat = first(lat), long = first(long))
+
+best_models_char <- best_non_ss_models %>%
+  mutate(color = if_else(run == 'Single-site', '#00bbf9',
+                         if_else(run == 'Clustered', '#ff595e',
+                                 if_else(run == 'Hydro terrane', '#ffca3a','#00f5d4')))) %>%
+  left_join(basin_char, by = 'site_no')
+
+improvement_ms_models <- all_models %>%
+  select(site_no, Testing_NRMSE, run) %>%
+  pivot_wider(names_from = run, values_from = Testing_NRMSE) %>%
+  left_join(best_models_char, by = ('site_no')) %>%
+  mutate(improvement = `Single-site`-`NRMSE`) %>%
+  mutate(run = as.character(run)) %>%
+  mutate(run = if_else(improvement<0, 'Single-site', run)) %>%
+  mutate(run = factor(run, levels = c('Single-site','Clustered','Hydro terrane','Multi-site')))
+
+
+for(i in (15:69)){
+print(i)
+print(colnames(improvement_ms_models)[i])
+tmp <- data.frame(var = improvement_ms_models[[i]], 
+                    improvement = improvement_ms_models[["improvement"]],
+                    run = improvement_ms_models[['run']])
+  
+var_plot <- ggplot(tmp, aes(x = var, y = improvement, fill = run)) +
+  geom_hline(yintercept = 0, color = 'darkgray', linetype="dashed", size=1)+
+  geom_point(shape = 21, size = 4, alpha = 0.8)+
+  scale_fill_manual(values = c('#00bbf9','#ff595e','#ffca3a','#00f5d4'))+
+  #xlim(0,150)+
+  ylim(-50,50)+
+  theme_bw()+
+  theme(legend.text = element_text(size = 16),
+        legend.title = element_text(size = 16),
+        axis.text = element_text(size = 16),
+        axis.title = element_text(size = 16),
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        #legend.position = 'right',
+        title = element_text(size = 18))+
+  ylab('Improvement in NRMSE')+
+  xlab(colnames(improvement_ms_models)[i])+
+  ggtitle(colnames(improvement_ms_models)[i])
+
+jpeg(paste0('04_analysis/figs/improvement_plots/',colnames(improvement_ms_models)[i],'.jpeg'))
+print(var_plot)
+dev.off()
+}
+
+  
+  
+
+
+
 

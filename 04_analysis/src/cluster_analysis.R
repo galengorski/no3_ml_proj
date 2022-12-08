@@ -23,6 +23,10 @@ library(maps)
 library(RColorBrewer)
 # install.packages(sf)
 library(sf)
+# install.packages('cowplot')
+library(cowplot)
+# install.packages('scales')
+library(scales)
 
 #####
 #===================================================================================#
@@ -46,25 +50,7 @@ char_feat_imp <- read_csv('04_analysis/out/multi_site_ensemble_feature_importanc
 #find the cleaned up names of the features with higher feature importances scores
 names_lookup <- read_csv('04_analysis/out/basin_char_names_lookup.csv') %>%
   filter(Names %in% char_feat_imp | !is.na(Calculated)) %>%
-  #i am going to remove both of these variables for clustering because a single site is an outlier and 
-  #it makes clustering produce unhelpful results
-  #filter(!Names_Clean %in% c('ANTHRO_NID_STORAGE2013','ANTHRO_MAJOR2013')) %>%
   pull(Names_Clean) 
-
-#several of the reservoir basin variables are dominating the clustering because
-#there is one site that is an outlier
-#for ANTHRO_NID_SOTRAGE2013 it is Delaware at Trenton
-basin_char_clean %>% 
-  select(site_no, station_nm, ANTHRO_NID_STORAGE2013) %>% 
-  arrange(desc(ANTHRO_NID_STORAGE2013)) %>%
-  head()
-#for ANTHRO_MAJOR2013 it is the Potomac River
-basin_char_clean %>% 
-  select(site_no, station_nm, ANTHRO_MAJOR2013) %>% 
-  arrange(desc(ANTHRO_MAJOR2013)) %>%
-  head()
-
-
 
 used_for_modeling <- read_csv('04_analysis/out/basin_char_names_lookup.csv') %>%
   filter(Names %in% char_feat_imp) %>%
@@ -138,81 +124,20 @@ table(cluster_assignment_all_6)
 table(cluster_assignment_all_7)
 table(cluster_assignment_all_8)
 
-#Do a second round of clustering on the really big cluster, cluster number 1
-
-cluster_one <- cluster_assignment_all_3[cluster_assignment_all_3 == 1] %>% names()
-
-basin_char_cl1 <- basin_char_scaled[cluster_one,]
-
-cl1_cl <- clValid(basin_char_cl1, nClust = 2:8, clMethods = c('kmeans',"hierarchical"), validation = c('internal','stability'))
-
-summary(cl1_cl)
-op <- par(no.readonly=TRUE)
-par(mfrow=c(2,2),mar=c(4,4,3,1))
-plot(cl1_cl, legend=FALSE)
-plot(nClusters(cl1_cl),measures(cl1_cl,"Dunn")[,,1],type="n",axes=F, xlab="",ylab="")
-legend("center", clusterMethods(cl1_cl), col=1:9, lty=1:9, pch=paste(1:9))
-
-cluster_one_assignment <- cl1_cl@clusterObjs$kmeans$`4`$cluster
-
-#make a data frame with cluster assignment
-cluster_assig <- basin_char_clean %>%
-  dplyr::select(site_no, PHYS_LAT, PHYS_LONG) %>%
-  filter(site_no %in% cluster_one) %>%
-  mutate(cluster = factor(cluster_one_assignment))
 
 
-states <- sf::st_as_sf(maps::map("state", plot = FALSE, fill = TRUE), crs = 4326)
-states_map <- maps::map("state", plot = FALSE, fill = FALSE)
-site_cluster <- st_as_sf(cluster_assig, coords = c('PHYS_LONG','PHYS_LAT'), crs = 4326)
-
-
-ggplot(data = states) +
-  geom_sf()+
-  geom_sf(data = site_cluster, aes(fill = cluster), shape = 21, size = 3, alpha = 0.8) +
-  scale_colour_brewer(palette = "Spectral")+
-  coord_sf(xlim = c(-98, -68), ylim = c(35, 49), expand = FALSE) +
-  theme_bw()+
-  #guides(fill=guide_colourbar(title="Cluster assignment"))+
-  ggspatial::annotation_scale(
-    location = "tr",
-    bar_cols = c("grey60", "white")
-  )+
-  ggspatial::annotation_north_arrow(
-    location = "tr", which_north = "true",
-    pad_x = unit(-0.1, "in"), pad_y = unit(1.8, "in"),
-    style = ggspatial::north_arrow_minimal(
-      text_size = 8, line_width = .8
-    )
-  )
-
-table(cluster_one_assignment)
-
-
-#merge the cluster assignments together and save as a csv
-
-ca_all <- cluster_assignment_all_3 %>% 
+#merge the cluster assignments together with the basin characteristics and save as a csv
+ca_all <- cluster_assignment_all_7 %>% 
   as_tibble() %>%
-  mutate(site_no = names(cluster_assignment_all_3)) %>%
-  rename('cl_1' = 'value') %>%
-  left_join(as_tibble(cluster_one_assignment) %>% mutate(site_no = names(cluster_one_assignment))) %>%
-  rename('cl_2' = 'value') %>%
-  mutate(cl21 = replace(cl_2, is.na(cl_2), cl_1[is.na(cl_2)]*100)) %>%
-  dplyr::select(site_no, cl_1, cl21) %>%
-  rename('cl_2' = 'cl21') %>%
-  mutate(cl_2 = replace(cl_2, cl_2 == 200, 4)) %>%
-  mutate(cl_2 = replace(cl_2, cl_2 == 300, 5)) %>%
-  mutate(cl_2 = replace(cl_2, cl_2 == 400, 6))
+  mutate(site_no = names(cluster_assignment_all_7)) %>%
+  rename('cl_1' = 'value') 
 
-
-write_csv(ca_all, '04_analysis/out/site_cluster_membership.csv')
 
 basin_char_clusters <- basin_char_clean %>%
   dplyr::select(!`...1`) %>%
   relocate(station_nm, .after = site_no) %>%
-  left_join(ca_all[,c('site_no','cl_1','cl_2')]) %>%
-  rename('cluster_01' = 'cl_1') %>%
-  rename('cluster_02' = 'cl_2')
+  left_join(ca_all[,c('site_no','cl_1')]) %>%
+  rename('cluster_01' = 'cl_1')
   
 
 hydro_terranes <- read_csv('04_analysis/out/basin_char_w_clusters_6_hydro_terranes.csv') %>%
@@ -224,22 +149,27 @@ write_csv(clusters_ht, '04_analysis/out/basin_char_w_clusters_hydroterranes_2210
 
 
 #View final clusters
+
+clusters_ht <- read_csv('04_analysis/out/basin_char_w_clusters_hydroterranes_221005.csv')
 cluster_assig <- clusters_ht %>%
-  dplyr::select(site_no, long, lat, cluster_02, hydro_terrane) %>%
-  #filter(site_no %in% cluster_one) %>%
-  mutate(cluster = factor(cluster_02))
+  dplyr::select(site_no, PHYS_LONG, PHYS_LAT, cluster_01, hydro_terrane) %>%
+  mutate(cluster = factor(cluster_01))
 
 states <- sf::st_as_sf(maps::map("state", plot = FALSE, fill = TRUE), crs = 4326)
 states_map <- maps::map("state", plot = FALSE, fill = FALSE)
-site_cluster <- st_as_sf(cluster_assig, coords = c('long','lat'), crs = 4326)
+site_cluster <- st_as_sf(cluster_assig, coords = c('PHYS_LONG','PHYS_LAT'), crs = 4326)
 
 
-ggplot(data = states) +
+cl_map <- ggplot(data = states) +
   geom_sf()+
-  geom_sf(data = site_cluster, aes(fill = hydro_terrane), shape = 21, size = 3, alpha = 0.8) +
-  scale_colour_brewer(palette = "Spectral")+
+  geom_sf(data = site_cluster, aes(fill = cluster), shape = 21, size = 3.5, alpha = 0.8) +
   coord_sf(xlim = c(-98, -68), ylim = c(35, 49), expand = FALSE) +
   theme_bw()+
+  theme(legend.position = 'bottom',
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  guides(fill = guide_legend(nrow = 1, override.aes = list(size=5)))+
+  scale_fill_manual(values = cols) +
+  #guides(fill = guide_legend(nrow = 1))+
   #guides(fill=guide_colourbar(title="Cluster assignment"))+
   ggspatial::annotation_scale(
     location = "tr",
@@ -252,90 +182,162 @@ ggplot(data = states) +
       text_size = 8, line_width = .8
     )
   )
-
-table(cluster_one_assignment)
+#cl_map
+table(cluster_assig$cluster)
 
 
 ####################################
 #PCA plot with biplot for cluster analysis
-#read in the basin characteristics which include all static characteristics including those
-#that were not included in modeling and those that were calculated like cq slope
-basin_char_clean <- read_csv('04_analysis/out/basin_char_calc_clean.csv')
+#from: https://medium.com/@RaharditoDP/principal-component-analysis-with-biplot-analysis-in-r-ee39d17096a1
+library(factoextra)
+library(FactoMineR)
+show_col(hue_pal()(7))
 
-#read in a file with the site names
-site_names <- read_csv('01_fetch/out/site_list_220507.csv') %>% dplyr::select(site_no, station_nm)
-
-basin_char_clean <- merge(basin_char_clean, site_names, by = 'site_no')
-
-#read in feature importance
-char_feat_imp <- read_csv('04_analysis/out/multi_site_ensemble_feature_importance.csv') %>%
-  filter(!feat %in% c('Discharge','Precip','TempMax','TempMin','SolarRad')) %>%
-  arrange(desc(feat_imp_mean)) %>%
-  filter(feat_imp_mean > 0.25) %>%
-  pull(feat)
-
-#find the cleaned up names of the features with higher feature importances scores
-names_lookup <- read_csv('04_analysis/out/basin_char_names_lookup.csv') %>%
-  filter(Names %in% char_feat_imp | !is.na(Calculated)) %>%
-  #i am going to remove both of these variables for clustering because a single site is an outlier and 
-  #it makes clustering produce unhelpful results
-  #filter(!Names_Clean %in% c('ANTHRO_NID_STORAGE2013','ANTHRO_MAJOR2013')) %>%
-  pull(Names_Clean) 
-
-#several of the reservoir basin variables are dominating the clustering because
-#there is one site that is an outlier
-#for ANTHRO_NID_SOTRAGE2013 it is Delaware at Trenton
-basin_char_clean %>% 
-  select(site_no, station_nm, ANTHRO_NID_STORAGE2013) %>% 
-  arrange(desc(ANTHRO_NID_STORAGE2013)) %>%
-  head()
-#for ANTHRO_MAJOR2013 it is the Potomac River
-basin_char_clean %>% 
-  select(site_no, station_nm, ANTHRO_MAJOR2013) %>% 
-  arrange(desc(ANTHRO_MAJOR2013)) %>%
-  head()
-
-
-
-used_for_modeling <- read_csv('04_analysis/out/basin_char_names_lookup.csv') %>%
-  filter(Names %in% char_feat_imp) %>%
-  pull(Names)
-
-
-basin_char_scaled <- as.matrix(basin_char_clean %>%
+basin_char_for_pca <- as.matrix(basin_char_clean %>%
                                  dplyr::select(all_of(names_lookup)))
-rownames(basin_char_scaled) <- basin_char_clean$site_no
+rownames(basin_char_for_pca) <- basin_char_clean$site_no
+
+res.pca <- PCA(basin_char_for_pca, graph = FALSE)
+
+fviz_screeplot(res.pca, addlabels = TRUE)
+
+cols <- c('#F8766D','#C49A00','#53B400','#00C094','#00B6EB','#A58AFF','#FB61D7')
+
+cl_biplot <- fviz_pca_biplot(res.pca, 
+                             fill.ind = factor(clusters_ht$cluster_01), pointshape = 21, pointsize = 3.5, mean.point = FALSE, 
+                label = 'var', legend.title = 'Cluster', repel = TRUE, 
+                select.var = list(contrib = 12), ggtheme = theme_bw(), col.var = 'lightgray', xlab = 'PC1', ylab = 'PC2',
+                title = 'Principal component analysis of clustered sites', alpha = 0.85)+
+  theme(legend.text = element_text(size = 8),
+        legend.title = element_text(size = 8),
+        axis.text = element_text(size = 8),
+        axis.title = element_text(size = 8),
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        legend.position = 'none')
 
 
-#cluster internal stability metrics
-# stab <- clValid(basin_char_scaled, 2:10, clMethods=c("hierarchical","kmeans"),validation="stability")
-# optimalScores(stab)
-# par(mfrow=c(2,2),mar=c(4,4,3,1))
-# plot(stab, measure=c("APN","AD","ADM"),legend=FALSE)
-# plot(nClusters(stab),measures(stab,"APN")[,,1],type="n",axes=F,xlab="",ylab="")
-# legend("center", clusterMethods(stab), col=1:9, lty=1:9, pch=paste(1:9))
-# par(op)
+lulc <- clusters_ht %>%
+  group_by(cluster_01) %>%
+  dplyr::select(starts_with('LULC')) %>%
+  summarise(across(LULC_DEV:LULC_WTLND,median)) %>%
+  pivot_longer(cols = LULC_DEV:LULC_WTLND) %>%
+  mutate(Landuse = factor(name, levels = rev(c('LULC_AG','LULC_DEV','LULC_FOR','LULC_WTLND')))) %>%
+  mutate(cluster = factor(cluster_01)) %>%
+  ggplot(aes(x = cluster, y = value*100, fill = Landuse))+
+  geom_bar(stat = 'identity')+
+  theme_bw()+
+  theme(legend.text = element_text(size = 8),
+        axis.text = element_text(size = 8),
+        axis.title = element_text(size = 8),
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        legend.position = 'none',
+        legend.title = element_blank(),
+        title = element_text(size = 9))+
+  scale_fill_manual(values = rev(c('#bb9457','firebrick','#adc178','lightblue')), 
+                    labels = rev(c('Agriculture','Developed','Forested','Wetlands')))+
+  guides(fill = guide_legend(nrow = 2, override.aes = list(size=3)))+
+  ggtitle('Land use')+
+  ylab('Percentage of contributing area')
 
-# t <- read_csv('04_analysis/out/basin_char_w_clusters_6.csv')
-# t$cluster[1:46] <- cluster_assignment
-# 
-# basin_char_cl <- clValid(basin_char_scaled, nClust = 2:10, clMethods = c('kmeans',"hierarchical"))
-# 
-# 
-# hclust_avg <- basin_char_cl@clusterObjs$hierarchical
-# cut_avg <- cutree(hclust_avg, k = 2)
-# plot(hclust_avg)
-# rect.hclust(hclust_avg , k = 6, border = 2:3)
-# abline(h = 5, col = 'red')
+soils <- clusters_ht %>%
+  group_by(cluster_01) %>%
+  dplyr::select(starts_with('SOIL')) %>%
+  mutate(High = SOIL_HGA+SOIL_HGAD, Moderate = SOIL_HGB+SOIL_HGBC+SOIL_HGBD,
+         Slow = SOIL_HGC+SOIL_HGCD, `Very slow` = SOIL_HGD) %>%
+  dplyr::select(!starts_with('SOIL')) %>%
+  summarise(across(High:`Very slow`,median)) %>%
+  pivot_longer(cols = High:`Very slow`) %>%
+  mutate(Infiltration = factor(name, levels = rev(c('Very slow','Slow','Moderate','High')))) %>%
+  mutate(cluster = factor(cluster_01)) %>%
+  ggplot(aes(x = cluster, y = value, fill = Infiltration))+
+  geom_bar(stat = 'identity')+
+  scale_fill_manual(values = rev(c('#432818','#99582a','#bb9457','#ffe6a7')), 
+                    labels = rev(c('Very slow','Slow','Moderate','High')),
+                    name = '')+
+  guides(fill = guide_legend(nrow = 2, override.aes = list(size=3)))+
+  ggtitle('Soil infiltration capacity')+
+  theme_bw()+
+  theme(legend.text = element_text(size = 8),
+        legend.title = element_text(size = 8),
+        axis.text = element_text(size = 8),
+        axis.title = element_text(size = 8),
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        legend.position = 'none',
+        title = element_text(size = 9))+
+  ylab('Percentage of contributing area')
+soils 
 
-# 
-# suppressPackageStartupMessages(library(dendextend))
-# avg_dend_obj <- as.dendrogram(hclust_avg)
-# avg_col_dend <- color_branches(avg_dend_obj, h = 2)
-# plot(avg_col_dend)
-# 
-# dist_matrix <- dist(basin_char_scaled, method = 'euclidean')
-# hclust_avg <- hclust(dist_matrix, method = 'average')
-# plot(hclust_avg)
-# cut_avg <- cutree(hclust_avg, k = 2)
-# 
+hydro_mean_q <- clusters_ht %>%
+  group_by(cluster_01) %>%
+  summarise(across(PHYS_BASIN_AREA:CHEM_CQ_SLOPE,median)) %>%
+  mutate(cluster = factor(cluster_01)) %>%
+  ggplot(aes(x = cluster, y = log10(HYDRO_MEAN_Q), fill = cluster))+
+  geom_bar(stat = 'identity')+
+  ggtitle('Mean discharge')+
+  theme_bw()+
+  theme(legend.text = element_text(size = 8),
+        legend.title = element_text(size = 8),
+        axis.text = element_text(size = 8),
+        axis.title = element_text(size = 8),
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        legend.position = 'none',
+        title = element_text(size = 9))+
+  ylab('log(Mean discharge) (cfs)')
+
+anthro_maj <- clusters_ht %>%
+  group_by(cluster_01) %>%
+  summarise(across(PHYS_BASIN_AREA:CHEM_CQ_SLOPE,median)) %>%
+  mutate(cluster = factor(cluster_01)) %>%
+  ggplot(aes(x = cluster, y = ANTHRO_MAJOR2013, fill = cluster))+
+  geom_bar(stat = 'identity')+
+  ggtitle('Major dams')+
+  theme_bw()+
+  theme(legend.text = element_text(size = 8),
+        legend.title = element_text(size = 8),
+        axis.text = element_text(size = 8),
+        axis.title = element_text(size = 8),
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        legend.position = 'none',
+        title = element_text(size = 9))+
+  ylab('Number of major dams')
+
+anthro_npdes <- clusters_ht %>%
+  group_by(cluster_01) %>%
+  summarise(across(PHYS_BASIN_AREA:CHEM_CQ_SLOPE,median)) %>%
+  mutate(cluster = factor(cluster_01)) %>%
+  ggplot(aes(x = cluster, y = ANTHRO_NPDES_MAJ, fill = cluster))+
+  geom_bar(stat = 'identity')+
+  ggtitle('Major NPDES sites')+
+  theme_bw()+
+  theme(legend.text = element_text(size = 8),
+        legend.title = element_text(size = 8),
+        axis.text = element_text(size = 8),
+        axis.title = element_text(size = 8),
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        legend.position = 'none',
+        title = element_text(size = 9))+
+  ylab('Number of NPDES sites')
+
+hydro_recharge <- clusters_ht %>%
+  group_by(cluster_01) %>%
+  summarise(across(PHYS_BASIN_AREA:CHEM_CQ_SLOPE,median)) %>%
+  mutate(cluster = factor(cluster_01)) %>%
+  ggplot(aes(x = cluster, y = HYDRO_RECHG, fill = cluster))+
+  geom_bar(stat = 'identity')+
+  ggtitle('Amount of recharge')+
+  theme_bw()+
+  theme(legend.text = element_text(size = 8),
+        legend.title = element_text(size = 8),
+        axis.text = element_text(size = 8),
+        axis.title = element_text(size = 8),
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        legend.position = 'none',
+        title = element_text(size = 9))+
+  ylab('Recharge')
+
+layout <- as.matrix(rbind(c(1,1,1,1,3,3,4,4),c(1,1,1,1,3,3,4,4),
+                          c(1,1,1,1,5,5,6,6),c(2,2,2,2,5,5,6,6),
+                          c(2,2,2,2,7,7,8,8),c(2,2,2,2,7,7,8,8)))
+pdf('04_analysis/figs/clusters_map.pdf', height = 8, width = 11)
+gridExtra::grid.arrange(cl_map, cl_biplot, lulc, soils, hydro_mean_q, anthro_maj, anthro_npdes, hydro_recharge, layout_matrix = layout)
+dev.off()

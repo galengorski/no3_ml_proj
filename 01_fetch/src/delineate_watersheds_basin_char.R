@@ -111,7 +111,7 @@ for (i in 1:nrow(site_data)){
     dplyr::select(date, value, variable) %>%
     pivot_wider(names_from = variable, values_from = value) %>%
     mutate(prcp = `1`, tmin = `2`, tmax = `3`, srad = `4`) %>%
-    dplyr::select(date, prcp, tmin, tmax, srad)
+    dplyr::select(date, prcp, srad, tmin, tmax)
   #write to file
   write_csv(mean_vals, paste0('01_fetch/out/met_data/',site_data$site_no[i],'_met_data.csv'))
   

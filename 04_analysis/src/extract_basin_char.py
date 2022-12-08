@@ -59,9 +59,5 @@ hydro_summary = hydro_summary.join(hydro_cq.rename('cq_slope').to_frame())
 
 basin_char_hydro = sd_sf.join(hydro_summary, on = 'site_no')
 
-basin_char_hydro_cluster = basin_char_hydro.copy()
-
-basin_char_hydro_cluster = basin_char_hydro_cluster.drop(columns = ['site_no','mean_no3','sd_no3'])
-
-sd_sf.to_csv('02_munge/out/basin_char_full.csv')
+basin_char_hydro.to_csv('02_munge/out/basin_char_full.csv')
 

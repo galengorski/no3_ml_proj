@@ -200,7 +200,7 @@ def train_lstm(config_loc, concat_model_data, out_dir, hp_tune, hp_tune_vals):
     
     #return model, running_loss, valid_loss
 
-def make_predictions_lstm(config_loc, out_dir, concat_model_data, hp_tune, hp_tune_vals):
+def make_predictions_lstm(config_loc, out_dir, concat_model_data, hp_tune, hp_tune_vals, train_model, weights_dir):
     
     with open(config_loc) as stream:
       config = yaml.safe_load(stream)
@@ -232,7 +232,10 @@ def make_predictions_lstm(config_loc, out_dir, concat_model_data, hp_tune, hp_tu
     
     model = LSTM_layer(num_features, hidden_size, seq_len, num_layers, dropout, learning_rate, weight_decay)
     model = model.to(device)
-    model.load_state_dict(torch.load(os.path.join(out_dir,"model_weights.pt")))
+    if train_model:
+        model.load_state_dict(torch.load(os.path.join(out_dir,"model_weights.pt")))
+    else:
+        model.load_state_dict(torch.load(os.path.join(weights_dir,"model_weights.pt")))
     
     train_val_dataset = CatchmentDataset(concat_model_data['train_val_x'], concat_model_data['train_val_y'])
     full_dataset = CatchmentDataset(concat_model_data['full_x'], concat_model_data['full_y'])
@@ -404,14 +407,11 @@ def save_config(out_path, config_loc, station_nm, site_no, p_train, l_train, p_v
     return site_dict
 
 
-
 def unnormalize(pred, mean, std):
     return mean + std * pred
 
 
-
-
-def run_multi_site_model_c(netcdf_loc, config_loc, site_no_list, station_nm_list, read_input_data_from_file, input_file_loc, out_dir, run_id, train_model, multi_site, hp_tune = False, hp_tune_vals = {}, save_results_csv = True):
+def run_multi_site_model_c(netcdf_loc, config_loc, site_no_list, station_nm_list, read_input_data_from_file, input_file_loc, out_dir, run_id, train_model, multi_site, weights_dir, hp_tune = False, hp_tune_vals = {}, save_results_csv = True):
     
     os.makedirs(out_dir, exist_ok = True)
     
@@ -431,7 +431,7 @@ def run_multi_site_model_c(netcdf_loc, config_loc, site_no_list, station_nm_list
     if train_model:  
         train_lstm(config_loc, concat_model_data, out_dir, hp_tune, hp_tune_vals)
     
-    lstm_predictions = make_predictions_lstm(config_loc, out_dir, concat_model_data, hp_tune, hp_tune_vals)
+    lstm_predictions = make_predictions_lstm(config_loc, out_dir, concat_model_data, hp_tune, hp_tune_vals, train_model, weights_dir)
     
     preds_unnorm = unnormalize_lstm_prediction(config_loc, lstm_predictions, n_means_stds)
     
@@ -482,7 +482,7 @@ def run_multi_site_model_c(netcdf_loc, config_loc, site_no_list, station_nm_list
     all_sites_results_df = pd.DataFrame(all_sites_results_list)
     all_sites_results_df.to_csv(os.path.join(out_dir,"AllSitesModelResults.csv"))
     
-def run_single_site_model_c(netcdf_loc, config_loc, site_no, station_nm, read_input_data_from_file, input_file_loc, out_dir, run_id, train_model, multi_site, hp_tune, hp_tune_vals, save_results_csv = True):
+def run_single_site_model_c(netcdf_loc, config_loc, site_no, station_nm, read_input_data_from_file, input_file_loc, out_dir, run_id, train_model, multi_site, hp_tune, hp_tune_vals, weights_dir, save_results_csv = True):
     os.makedirs(out_dir, exist_ok = True)
     
     if read_input_data_from_file:
@@ -498,7 +498,7 @@ def run_single_site_model_c(netcdf_loc, config_loc, site_no, station_nm, read_in
     if train_model:  
         train_lstm(config_loc, site_data, out_dir, hp_tune, hp_tune_vals)
     
-    lstm_predictions = make_predictions_lstm(config_loc, out_dir, site_data, hp_tune, hp_tune_vals)    
+    lstm_predictions = make_predictions_lstm(config_loc, out_dir, site_data, hp_tune, hp_tune_vals, weights_dir)    
     
     preds_unnorm = unnormalize_lstm_prediction(config_loc, lstm_predictions, n_means_stds)
         
