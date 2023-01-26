@@ -121,7 +121,7 @@ def to_numpy(tensor):
         tensor = tensor.cpu()
     return tensor.detach().numpy()
 
-def train_lstm(config_loc, concat_model_data, out_dir, hp_tune, hp_tune_vals):
+def train_lstm(config_loc, concat_model_data, out_dir, hp_tune, hp_tune_vals, fine_tune = False, weights_dir = None):
     
     with open(config_loc) as stream:
       config = yaml.safe_load(stream)
@@ -160,7 +160,15 @@ def train_lstm(config_loc, concat_model_data, out_dir, hp_tune, hp_tune_vals):
     # initialize the model
     model = LSTM_layer(num_features, hidden_size, seq_len, num_layers, dropout, learning_rate, weight_decay)
     model = model.to(device)
-
+    
+    #if fine_tune = True, the read the weights in from the file,
+    #train the model using the new data, and save the new weights in the out_dir
+    if fine_tune:
+        model.load_state_dict(torch.load(os.path.join(weights_dir,"model_weights.pt")))
+        print("Loading pre-trained weights")
+    else:
+        print("Not loading pre-trained weights")
+        
     #run the model
     running_loss = []
     valid_loss = []
@@ -411,7 +419,7 @@ def unnormalize(pred, mean, std):
     return mean + std * pred
 
 
-def run_multi_site_model_c(netcdf_loc, config_loc, site_no_list, station_nm_list, read_input_data_from_file, input_file_loc, out_dir, run_id, train_model, multi_site, weights_dir, hp_tune = False, hp_tune_vals = {}, save_results_csv = True):
+def run_multi_site_model_c(netcdf_loc, config_loc, site_no_list, station_nm_list, read_input_data_from_file, input_file_loc, out_dir, run_id, train_model, multi_site, fine_tune, weights_dir, hp_tune = False, hp_tune_vals = {}, save_results_csv = True):
     
     os.makedirs(out_dir, exist_ok = True)
     
@@ -429,7 +437,7 @@ def run_multi_site_model_c(netcdf_loc, config_loc, site_no_list, station_nm_list
         concat_model_data, n_means_stds = ppf.full_prepare_multi_site_data(netcdf_loc, config_loc, site_no_list, station_nm_list, out_dir)
     
     if train_model:  
-        train_lstm(config_loc, concat_model_data, out_dir, hp_tune, hp_tune_vals)
+        train_lstm(config_loc, concat_model_data, out_dir, hp_tune, hp_tune_vals, fine_tune, weights_dir)
     
     lstm_predictions = make_predictions_lstm(config_loc, out_dir, concat_model_data, hp_tune, hp_tune_vals, train_model, weights_dir)
     

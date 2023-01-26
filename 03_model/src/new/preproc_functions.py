@@ -77,9 +77,11 @@ def split_norm_combine(data, seq_len, trn_frac, val_frac, test_frac, config_loc)
     #get the split points based on the availability of nitrate data
     start_train_date = data_no_nans_seq_len.index[0]
     end_train_date = data_no_nans_seq_len.index[math.floor(trn_frac*data_no_nans_seq_len.shape[0])-1]
-    start_val_date = end_train_date+datetime.timedelta(days=1)
-    end_val_date = data_no_nans_seq_len.index[math.floor(val_frac*data_no_nans_seq_len.shape[0])+math.floor(trn_frac*data_no_nans_seq_len.shape[0])]
-    start_test_date = data_no_nans_seq_len.index[-math.floor((test_frac)*data_no_nans_seq_len.shape[0])]
+    #the validation set start date is calculated by counting backward from the end of the dataset
+    #for the test fraction and the validation fraction
+    start_val_date = data_no_nans_seq_len.index[-(math.floor((test_frac)*data_no_nans_seq_len.shape[0])+math.floor((val_frac)*data_no_nans_seq_len.shape[0]))]
+    end_val_date = data_no_nans_seq_len.index[-math.floor((test_frac)*data_no_nans_seq_len.shape[0])-2]
+    start_test_date = data_no_nans_seq_len.index[-math.floor((test_frac)*data_no_nans_seq_len.shape[0])-1]
     end_test_date = data_no_nans_seq_len.index[data_no_nans_seq_len.shape[0]-1] 
     
     set_dates = {
@@ -157,9 +159,11 @@ def split_multi_site_data(data, seq_len, trn_frac, val_frac, test_frac, config_l
     #get the split points based on the availability of nitrate data
     start_train_date = data_no_nans_seq_len.index[0]
     end_train_date = data_no_nans_seq_len.index[math.floor(trn_frac*data_no_nans_seq_len.shape[0])-1]
-    start_val_date = end_train_date+datetime.timedelta(days=1)
-    end_val_date = data_no_nans_seq_len.index[math.floor(val_frac*data_no_nans_seq_len.shape[0])+math.floor(trn_frac*data_no_nans_seq_len.shape[0])]
-    start_test_date = data_no_nans_seq_len.index[-math.floor((test_frac)*data_no_nans_seq_len.shape[0])]
+    #the validation set start date is calculated by counting backward from the end of the dataset
+    #for the test fraction and the validation fraction
+    start_val_date = data_no_nans_seq_len.index[-(math.floor((test_frac)*data_no_nans_seq_len.shape[0])+math.floor((val_frac)*data_no_nans_seq_len.shape[0]))]
+    end_val_date = data_no_nans_seq_len.index[-math.floor((test_frac)*data_no_nans_seq_len.shape[0])-2]
+    start_test_date = data_no_nans_seq_len.index[-math.floor((test_frac)*data_no_nans_seq_len.shape[0])-1]
     end_test_date = data_no_nans_seq_len.index[data_no_nans_seq_len.shape[0]-1] 
     
     set_dates = {
@@ -347,6 +351,8 @@ def full_prepare_multi_site_data(netcdf_loc, config_loc, site_no_list, station_n
         static_features = config['static_features']
         feat_list.extend(static_features)
     
+    #if config predcit period is "full" meaning you are not using a validation
+    #set, then the training fraction is trn_frac + val_frac
     if config['predict_period'] == 'full':
         trn_frac = config['trn_frac']+config['val_frac']
     else:    
@@ -400,6 +406,9 @@ def full_prepare_multi_site_data(netcdf_loc, config_loc, site_no_list, station_n
         n_obs_full[site_no] = sets['full'].shape[0]
         n_obs_train_val[site_no] = sets['train_val'].shape[0]
         
+     
+#   if fine_tune:
+#        normalize with entire dataset
     train_norm, val_norm, train_val_norm, test_norm, n_means_stds = normalize_multi_site_data(full_data_all_sites, train_data_all_sites, val_data_all_sites, train_val_data_all_sites, test_data_all_sites)
     
     #initiate empty tensors for the input data
