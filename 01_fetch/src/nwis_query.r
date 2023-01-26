@@ -209,5 +209,5 @@ nwis_lin_filled %>%
 
 sites <- unique(nwis_lin_filled$site_no)
 sites_info <- readNWISsite(siteNumbers = sites)
-write_csv(nwis_lin_filled, 'out/hydro_filled_220128.csv')
-write_csv(sites_info, 'out/site_list_220128.csv')
+#write_csv(nwis_lin_filled, 'out/hydro_filled_220128.csv')
+#write_csv(sites_info, 'out/site_list_220128.csv')
