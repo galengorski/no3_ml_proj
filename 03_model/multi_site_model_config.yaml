@@ -54,7 +54,7 @@ test_frac: 0.25
 #number of features used
 num_features: 40   
 learning_rate: 0.001
-num_epochs: 64
+num_epochs: 4
 batch_size: 512
 #number of layers
 num_layers: 4

@@ -79,7 +79,7 @@ def split_norm_combine(data, seq_len, trn_frac, val_frac, test_frac, config_loc)
     end_train_date = data_no_nans_seq_len.index[math.floor(trn_frac*data_no_nans_seq_len.shape[0])-1]
     #the validation set start date is calculated by counting backward from the end of the dataset
     #for the test fraction and the validation fraction
-    start_val_date = data_no_nans_seq_len.index[-(math.floor((test_frac)*data_no_nans_seq_len.shape[0])+math.floor((val_frac)*data_no_nans_seq_len.shape[0]))]
+    start_val_date = data_no_nans_seq_len.index[-(math.floor((test_frac)*data_no_nans_seq_len.shape[0])+math.floor((val_frac)*data_no_nans_seq_len.shape[0]))-1]
     end_val_date = data_no_nans_seq_len.index[-math.floor((test_frac)*data_no_nans_seq_len.shape[0])-2]
     start_test_date = data_no_nans_seq_len.index[-math.floor((test_frac)*data_no_nans_seq_len.shape[0])-1]
     end_test_date = data_no_nans_seq_len.index[data_no_nans_seq_len.shape[0]-1] 
@@ -104,10 +104,10 @@ def split_norm_combine(data, seq_len, trn_frac, val_frac, test_frac, config_loc)
     n_obs_test = test.Nitrate.dropna().shape[0]
     
     #normalize sets separately
-    train_norm = (train - train_val.mean(axis=0)) / train_val.std(axis=0)
+    train_norm = (train - train.mean(axis=0)) / train.std(axis=0)
     val_norm = (val - train.mean(axis=0)) / train.std(axis=0)
-    train_val_norm = (train_val - train_val.mean(axis=0)) / train_val.std(axis=0)
-    test_norm = (test - train_val.mean(axis=0)) / train_val.std(axis=0)
+    train_val_norm = (train_val - train.mean(axis=0)) / train.std(axis=0)
+    test_norm = (test - train.mean(axis=0)) / train.std(axis=0)
     
     if predict_period == 'full':
         full_norm = pd.concat([train_norm, test_norm])
@@ -161,7 +161,7 @@ def split_multi_site_data(data, seq_len, trn_frac, val_frac, test_frac, config_l
     end_train_date = data_no_nans_seq_len.index[math.floor(trn_frac*data_no_nans_seq_len.shape[0])-1]
     #the validation set start date is calculated by counting backward from the end of the dataset
     #for the test fraction and the validation fraction
-    start_val_date = data_no_nans_seq_len.index[-(math.floor((test_frac)*data_no_nans_seq_len.shape[0])+math.floor((val_frac)*data_no_nans_seq_len.shape[0]))]
+    start_val_date = data_no_nans_seq_len.index[-(math.floor((test_frac)*data_no_nans_seq_len.shape[0])+math.floor((val_frac)*data_no_nans_seq_len.shape[0]))-1]
     end_val_date = data_no_nans_seq_len.index[-math.floor((test_frac)*data_no_nans_seq_len.shape[0])-2]
     start_test_date = data_no_nans_seq_len.index[-math.floor((test_frac)*data_no_nans_seq_len.shape[0])-1]
     end_test_date = data_no_nans_seq_len.index[data_no_nans_seq_len.shape[0]-1] 
@@ -214,10 +214,10 @@ def normalize_multi_site_data(data, train, val, train_val, test):
     test = test.drop(columns = ['site_no'])
 
     #normalize sets separately
-    train_norm = (train - train_val.mean(axis=0)) / train_val.std(axis=0)
+    train_norm = (train - train.mean(axis=0)) / train.std(axis=0)
     val_norm = (val - train.mean(axis=0)) / train.std(axis=0)
-    train_val_norm = (train_val - train_val.mean(axis=0)) / train_val.std(axis=0)
-    test_norm = (test - train_val.mean(axis=0)) / train_val.std(axis=0)
+    train_val_norm = (train_val - train.mean(axis=0)) / train.std(axis=0)
+    test_norm = (test - train.mean(axis=0)) / train.std(axis=0)
     
     #add site no back in
     train_norm['site_no'] = train_site_v
@@ -237,7 +237,16 @@ def normalize_multi_site_data(data, train, val, train_val, test):
     'test_mean' : test.Nitrate.mean(),
     'test_std' : test.Nitrate.std()}
     
-    return train_norm, val_norm, train_val_norm, test_norm, n_means_stds
+    all_variables_means_stds = {'train_mean' : train.mean(axis=0),
+    'train_std' : train.std(axis=0),
+    'val_mean' : val.Nitrate.mean(),
+    'val_std' : val.Nitrate.std(),
+    'train_val_mean': train_val.mean(axis=0),
+    'train_val_std': train_val.std(axis=0),
+    'test_mean' : test.mean(axis=0),
+    'test_std' : test.std(axis=0)}
+    
+    return train_norm, val_norm, train_val_norm, test_norm, n_means_stds, all_variables_means_stds
 
 
 
@@ -248,6 +257,8 @@ def prepare_data(data, seq_len, set_dates):
     end_train_date = set_dates['end_train_date']
     start_val_date = set_dates['start_val_date']
     end_val_date = set_dates['end_val_date']
+    start_test_date = set_dates['start_test_date']
+    end_test_date = set_dates['end_test_date']
     
     #define a function which that finds the row with nan
     which = lambda lst:list(np.where(lst)[0])
@@ -266,19 +277,25 @@ def prepare_data(data, seq_len, set_dates):
     val_dates = data_no_nans_seq_len[start_val_date:end_val_date].index
     nobs_val = data_no_nans_seq_len[start_val_date:end_val_date].shape[0]
     
-    #test_y = data_no_nans_seq_len[start_test_date:end_test_date]
-    #test_dates = data_no_nans_seq_len[start_test_date:end_test_date].index
-    #nobs_test = data_no_nans_seq_len[start_test_date:end_test_date].shape[0]
+    test_y = data_no_nans_seq_len[start_test_date:end_test_date]
+    test_dates = data_no_nans_seq_len[start_test_date:end_test_date].index
+    nobs_test = data_no_nans_seq_len[start_test_date:end_test_date].shape[0]
     
     #full data from seq_len through to the end of the dataset including na dates
     full_y = data.Nitrate[seq_len:]
     full_dates = data[seq_len:].index
     
+    full_y_no_nans = data_no_nans_seq_len[start_train_date:end_test_date]
+    
     #this is the number of nitrate observations that have seq_len days of 
     #predictors before them in the dataset, for example if we have a nitrate observation
     #on the first day, we don't have any predictor data for the previous seq_len days for that 
     #observation
-    nobs = data_no_nans[data_no_nans.index > data.index[seq_len]].shape[0]   
+    nobs = data_no_nans[data_no_nans.index > data.index[seq_len]].shape[0] 
+    
+    nobs_train_val = nobs - nobs_test
+    trainval_dates = data_no_nans_seq_len[:nobs_train_val].index
+    
     #get rid of nitrate in the predictors
     data = data.drop(columns = 'Nitrate')
 
@@ -308,14 +325,14 @@ def prepare_data(data, seq_len, set_dates):
         
     train_x = combined_x[0:nobs_train,:,:]
     val_x = combined_x[nobs_train:(nobs_train+nobs_val),:,:]
-    trainval_x = combined_x[0:(nobs_train+nobs_val),:,:]
+    trainval_x = combined_x[0:nobs_train_val,:,:]
     #test_x = combined_x[(nobs_train+nobs_val):(nobs_train+nobs_val+nobs_test),:,:]
-    
+    test_x = combined_x[(nobs-nobs_test):(nobs),:,:]
     
     train_x_t, train_y_t = torch.from_numpy(np.array(train_x)).float(), torch.from_numpy(np.array(train_y)).float()
     val_x_t, val_y_t = torch.from_numpy(np.array(val_x)).float(), torch.from_numpy(np.array(val_y)).float()
-    trainval_x_t, trainval_y_t = torch.from_numpy(np.array(trainval_x)).float(), torch.from_numpy(np.array(train_y.append(val_y))).float()
-    #test_x_t, test_y_t = torch.from_numpy(np.array(test_x)).float(), torch.from_numpy(np.array(test_y)).float()
+    trainval_x_t, trainval_y_t = torch.from_numpy(np.array(trainval_x)).float(), torch.from_numpy(np.array(full_y_no_nans[0:-nobs_test])).float()
+    test_x_t, test_y_t = torch.from_numpy(np.array(test_x)).float(), torch.from_numpy(np.array(test_y)).float()
     full_x_t, full_y_t = torch.from_numpy(np.array(full_combined_x)).float(), torch.from_numpy(np.array(full_y)).float()    
    
     print('data prepped')
@@ -329,13 +346,17 @@ def prepare_data(data, seq_len, set_dates):
         'val_dates': val_dates,
         'train_val_x': trainval_x_t,
         'train_val_y': trainval_y_t,
+        'train_val_dates': trainval_dates,
+        'test_x': test_x_t,
+        'test_y': test_y_t,
+        'test_dates': test_dates,
         'full_x': full_x_t,
         'full_y': full_y_t,
         'full_dates': full_dates}
     
     return prepped_drivers_data
 
-def full_prepare_multi_site_data(netcdf_loc, config_loc, site_no_list, station_nm_list, out_dir):
+def full_prepare_multi_site_data(netcdf_loc, config_loc, site_no_list, station_nm_list, out_dir, fine_tune, weights_dir):
 
     with open(config_loc) as stream:
         config = yaml.safe_load(stream)
@@ -407,9 +428,18 @@ def full_prepare_multi_site_data(netcdf_loc, config_loc, site_no_list, station_n
         n_obs_train_val[site_no] = sets['train_val'].shape[0]
         
      
-#   if fine_tune:
-#        normalize with entire dataset
-    train_norm, val_norm, train_val_norm, test_norm, n_means_stds = normalize_multi_site_data(full_data_all_sites, train_data_all_sites, val_data_all_sites, train_val_data_all_sites, test_data_all_sites)
+    if fine_tune:
+        with open(os.path.join(weights_dir,'all_variables_means_stds'), 'rb') as all_variables_means_stds:
+            all_variables_means_stds_full_dataset = pickle.load(all_variables_means_stds)
+        #normalize with entire dataset        
+        train_norm = (train_data_all_sites.iloc[:,:-1]-all_variables_means_stds_full_dataset['train_mean'])/all_variables_means_stds_full_dataset['train_std']
+        val_norm = (val_data_all_sites.iloc[:,:-1]-all_variables_means_stds_full_dataset['train_mean'])/all_variables_means_stds_full_dataset['train_std']
+        train_val_norm = (train_val_data_all_sites.iloc[:,:-1]-all_variables_means_stds_full_dataset['train_mean'])/all_variables_means_stds_full_dataset['train_std']
+        test_norm = (test_data_all_sites.iloc[:,:-1]-all_variables_means_stds_full_dataset['train_mean'])/all_variables_means_stds_full_dataset['train_std']
+        
+    else:
+
+        train_norm, val_norm, train_val_norm, test_norm, n_means_stds, all_variables_means_stds = normalize_multi_site_data(full_data_all_sites, train_data_all_sites, val_data_all_sites, train_val_data_all_sites, test_data_all_sites)
     
     #initiate empty tensors for the input data
     train_x = torch.empty((0,seq_len,len(feat_list)-1), dtype=torch.float, device = device)
@@ -500,11 +530,8 @@ def full_prepare_multi_site_data(netcdf_loc, config_loc, site_no_list, station_n
         'start_test_date' : test_range[site_no]['From'],
         'end_test_date' : test_range[site_no]['To']
             }
-        
-        #full_x_site, train_x_site, val_x_site, train_val_x_site, test_x_site, full_y_site, train_y_site, val_y_site, train_val_y_site, test_y_site, train_dates_site, val_dates_site, test_dates_site = prepare_data(full_data_single_site, seq_len, site_start_train_date, site_end_train_date, site_start_val_date, site_end_val_date, site_start_test_date, site_end_test_date)
-        
+                
         prepped_drivers_data_site = prepare_data(full_data_single_site, seq_len, site_set_dates)
-        
         
         #iteratively fill all the tensors by concatenation with their constituent parts
         train_indices[site_no] = {"From":0,"To":0}
@@ -531,17 +558,16 @@ def full_prepare_multi_site_data(netcdf_loc, config_loc, site_no_list, station_n
         train_val_indices[site_no]["To"] = train_val_x.shape[0]
         train_val_y = torch.cat((train_val_y, prepped_drivers_data_site['train_val_y']), dim = 0)
         
-        train_val_dates = np.concatenate((train_val_dates, prepped_drivers_data_site['train_dates'], prepped_drivers_data_site['val_dates']), axis = 0)
+        train_val_dates = np.concatenate((train_val_dates, prepped_drivers_data_site['train_val_dates']), axis = 0)
 
-        
         #testing
-        #test_indices[site_no] = {"From":0,"To":0}
-        #test_indices[site_no]["From"] = test_x.shape[0]
-        #test_x = torch.cat((test_x, prepped_drivers_data_site['test_x']), dim = 0)
-        #test_indices[site_no]["To"] = test_x.shape[0]
-        #test_y = torch.cat((test_y, prepped_drivers_data_site['test_y']), dim = 0)
+        test_indices[site_no] = {"From":0,"To":0}
+        test_indices[site_no]["From"] = test_x.shape[0]
+        test_x = torch.cat((test_x, prepped_drivers_data_site['test_x']), dim = 0)
+        test_indices[site_no]["To"] = test_x.shape[0]
+        test_y = torch.cat((test_y, prepped_drivers_data_site['test_y']), dim = 0)
         
-        #test_dates = np.concatenate((test_dates, prepped_drivers_data_site['test_dates']), axis = 0)
+        test_dates = np.concatenate((test_dates, prepped_drivers_data_site['test_dates']), axis = 0)
         
         #full
         full_indices[site_no] = {"From":0,"To":0}
@@ -567,9 +593,9 @@ def full_prepare_multi_site_data(netcdf_loc, config_loc, site_no_list, station_n
     
     concat_data['train_val_data_indices_w_nans'] = train_val_data_indices_w_nans
 
-    #concat_data['test_x'] = test_x
-    #concat_data['test_y'] = test_y
-    #concat_data['test_dates'] = test_dates
+    concat_data['test_x'] = test_x
+    concat_data['test_y'] = test_y
+    concat_data['test_dates'] = test_dates
     
     concat_data['full_x'] = full_x
     concat_data['full_y'] = full_y
@@ -580,18 +606,26 @@ def full_prepare_multi_site_data(netcdf_loc, config_loc, site_no_list, station_n
     concat_data['train_indices'] = train_indices
     concat_data['val_indices'] = val_indices
     concat_data['train_val_indices'] = train_val_indices
-    #concat_data['test_indices'] = test_indices
+    concat_data['test_indices'] = test_indices
     concat_data['full_indices'] = full_indices
     
     concat_data['full_data_indices_w_nans'] = full_data_indices_w_nans
     
+    #write prepped data to file
     concat_data_file = open(os.path.join(out_dir,'prepped_data'),'wb')
     pickle.dump(concat_data, concat_data_file)
     concat_data_file.close()
-
+    
+    #write n_means_stds_to_file
     n_means_stds_file = open(os.path.join(out_dir,'n_means_stds'),'wb')
     pickle.dump(n_means_stds, n_means_stds_file)
     n_means_stds_file.close()
+    
+    #write all variables means stds to file
+    all_variables_means_stds_file = open(os.path.join(out_dir,'all_variables_means_stds'),'wb')
+    pickle.dump(all_variables_means_stds, all_variables_means_stds_file)
+    all_variables_means_stds_file.close()
+    
 
     return concat_data, n_means_stds
 

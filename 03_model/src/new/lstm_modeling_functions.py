@@ -7,6 +7,7 @@ Created on Fri Feb 18 11:47:03 2022
 """
 from datetime import date, timedelta
 import hydroeval as he
+import itertools
 import numpy as np
 import pandas as pd
 import preproc_functions as ppf
@@ -130,10 +131,12 @@ def train_lstm(config_loc, concat_model_data, out_dir, hp_tune, hp_tune_vals, fi
         learning_rate = hp_tune_vals['learning_rate']
         seq_len = hp_tune_vals['seq_len']
         num_layers = hp_tune_vals['num_layers']
+        hidden_size = hp_tune_vals['num_cells']
     else:
         learning_rate = config['learning_rate']
         seq_len = config['seq_len']
         num_layers = config['num_layers']
+        hidden_size = hp_tune_vals['hidden_size']
         
     feat_list = config['feat_list']
     if config['static_features_used']:
@@ -150,10 +153,12 @@ def train_lstm(config_loc, concat_model_data, out_dir, hp_tune, hp_tune_vals, fi
     shuffle = config['shuffle']
 
     # set up data splits
-    if config['predict_period'] == 'full':
-        train_dataset = CatchmentDataset(concat_model_data['train_val_x'], concat_model_data['train_val_y'])
-    else:
-        train_dataset = CatchmentDataset(concat_model_data['train_x'], concat_model_data['train_y'])
+    # if config['predict_period'] == 'full':
+    #     train_dataset = CatchmentDataset(concat_model_data['train_val_x'], concat_model_data['train_val_y'])
+    # else:
+    #     train_dataset = CatchmentDataset(concat_model_data['train_x'], concat_model_data['train_y'])
+    
+    train_dataset = CatchmentDataset(concat_model_data['train_x'], concat_model_data['train_y'])
     # Load data in batch
     train_loader = DataLoader(dataset = train_dataset, batch_size = batch_size, shuffle=shuffle,drop_last=False, pin_memory=True)
  
@@ -182,11 +187,15 @@ def train_lstm(config_loc, concat_model_data, out_dir, hp_tune, hp_tune_vals, fi
                 model.update(sequence, label)         
                 progress_bar.update(1)
         with torch.no_grad():
+            # if config['predict_period'] == 'full':
+            #     train_loss = model.loss(concat_model_data['train_val_x'], concat_model_data['train_val_y'])
+            # else:
+            #     train_loss = model.loss(concat_model_data['train_x'], concat_model_data['train_y'])
+            train_loss = model.loss(concat_model_data['train_x'], concat_model_data['train_y'])
             if config['predict_period'] == 'full':
-                train_loss = model.loss(concat_model_data['train_val_x'], concat_model_data['train_val_y'])
+                validation_loss = model.loss(concat_model_data['test_x'], concat_model_data['test_y'])
             else:
-                train_loss = model.loss(concat_model_data['train_x'], concat_model_data['train_y'])
-            validation_loss = model.loss(concat_model_data['val_x'], concat_model_data['val_y'])
+                validation_loss = model.loss(concat_model_data['val_x'], concat_model_data['val_y'])
             print(train_loss.item())
             running_loss.append(train_loss.item())
             valid_loss.append(validation_loss.item())
@@ -221,8 +230,6 @@ def make_predictions_lstm(config_loc, out_dir, concat_model_data, hp_tune, hp_tu
         learning_rate = config['learning_rate']
         seq_len = config['seq_len']
         num_layers = config['num_layers']
-
-    
         
     feat_list = config['feat_list']
     if config['static_features_used']:
@@ -236,10 +243,10 @@ def make_predictions_lstm(config_loc, out_dir, concat_model_data, hp_tune, hp_tu
     hidden_size = config['hidden_size']
     #shuffle = config['shuffle']
     predict_period = config['predict_period']
-
     
     model = LSTM_layer(num_features, hidden_size, seq_len, num_layers, dropout, learning_rate, weight_decay)
     model = model.to(device)
+    
     if train_model:
         model.load_state_dict(torch.load(os.path.join(out_dir,"model_weights.pt")))
     else:
@@ -268,11 +275,11 @@ def unnormalize_lstm_prediction(config_loc, lstm_predictions, n_means_stds):
     predict_period = config['predict_period']
     
     if predict_period == 'full':
-        pred_un = unnormalize(lstm_predictions['full_pred'], n_means_stds['train_val_mean'], n_means_stds['train_val_std'])
-        label_un = unnormalize(lstm_predictions['full_label'], n_means_stds['train_val_mean'], n_means_stds['train_val_std'])
+        pred_un = unnormalize(lstm_predictions['full_pred'], n_means_stds['train_mean'], n_means_stds['train_std'])
+        label_un = unnormalize(lstm_predictions['full_label'], n_means_stds['train_mean'], n_means_stds['train_std'])
     else:
-        pred_un = unnormalize(lstm_predictions['train_val_pred'], n_means_stds['train_val_mean'], n_means_stds['train_val_std'])
-        label_un = unnormalize(lstm_predictions['train_val_label'], n_means_stds['train_val_mean'], n_means_stds['train_val_std'])
+        pred_un = unnormalize(lstm_predictions['train_val_pred'], n_means_stds['train_mean'], n_means_stds['train_std'])
+        label_un = unnormalize(lstm_predictions['train_val_label'], n_means_stds['train_mean'], n_means_stds['train_std'])
 
     preds_unnorm = {'pred':pred_un,
                     'label':label_un}
@@ -419,7 +426,7 @@ def unnormalize(pred, mean, std):
     return mean + std * pred
 
 
-def run_multi_site_model_c(netcdf_loc, config_loc, site_no_list, station_nm_list, read_input_data_from_file, input_file_loc, out_dir, run_id, train_model, multi_site, fine_tune, weights_dir, hp_tune = False, hp_tune_vals = {}, save_results_csv = True):
+def run_multi_site_model_c(netcdf_loc, config_loc, site_no_list, station_nm_list, read_input_data_from_file, input_file_loc, out_dir, run_id, train_model, multi_site, fine_tune, weights_dir, hp_tune, hp_tune_vals, save_results_csv):
     
     os.makedirs(out_dir, exist_ok = True)
     
@@ -434,13 +441,13 @@ def run_multi_site_model_c(netcdf_loc, config_loc, site_no_list, station_nm_list
         print('Reading input data from '+ out_dir)
     else:         
         #prepare the data
-        concat_model_data, n_means_stds = ppf.full_prepare_multi_site_data(netcdf_loc, config_loc, site_no_list, station_nm_list, out_dir)
+        concat_model_data, n_means_stds = ppf.full_prepare_multi_site_data(netcdf_loc, config_loc, site_no_list, station_nm_list, out_dir, fine_tune, weights_dir)
     
     if train_model:  
         train_lstm(config_loc, concat_model_data, out_dir, hp_tune, hp_tune_vals, fine_tune, weights_dir)
     
     lstm_predictions = make_predictions_lstm(config_loc, out_dir, concat_model_data, hp_tune, hp_tune_vals, train_model, weights_dir)
-    
+
     preds_unnorm = unnormalize_lstm_prediction(config_loc, lstm_predictions, n_means_stds)
     
     all_sites_results_list = [] 
@@ -457,11 +464,12 @@ def run_multi_site_model_c(netcdf_loc, config_loc, site_no_list, station_nm_list
         site_to_val = concat_model_data['val_indices'][site_no]["To"]
         n_train = site_to_train - site_from_train
         n_val = site_to_val - site_from_val
-        site_from_train_val = concat_model_data['train_val_data_indices_w_nans'][site_no]["From"]
-        site_to_train_val = concat_model_data['train_val_data_indices_w_nans'][site_no]["To"]
+        site_from_train_val = concat_model_data['train_val_indices'][site_no]["From"]
+        site_to_train_val = concat_model_data['train_val_indices'][site_no]["To"]
+        
         site_from_full = concat_model_data['full_indices'][site_no]["From"]
         site_to_full = concat_model_data['full_indices'][site_no]["To"]
-        
+
             
         if config['predict_period'] == 'full':
             site_preds_unnorm = {
@@ -489,14 +497,56 @@ def run_multi_site_model_c(netcdf_loc, config_loc, site_no_list, station_nm_list
     
     all_sites_results_df = pd.DataFrame(all_sites_results_list)
     all_sites_results_df.to_csv(os.path.join(out_dir,"AllSitesModelResults.csv"))
+
+def wrapper_run_multi_site_model_c(run_config_loc):
+    with open(run_config_loc) as stream:
+        run_config = yaml.safe_load(stream) 
+        
+    site_info = pd.read_csv(run_config['site_info_loc'],  dtype = {'site_no':str})
+    site_no_list = site_info.site_no[0:3]
+    station_nm_list = site_info[site_info.site_no.isin(site_no_list)].station_nm
     
-def run_single_site_model_c(netcdf_loc, config_loc, site_no, station_nm, read_input_data_from_file, input_file_loc, out_dir, run_id, train_model, multi_site, hp_tune, hp_tune_vals, weights_dir, save_results_csv = True):
+    
+    model_run_id = run_config['model_run_id']
+    netcdf_loc = run_config['netcdf_loc']
+    config_loc = run_config['config_loc']
+    read_input_data_from_file = run_config['read_input_data_from_file']
+    n_reps = run_config['n_reps']
+    train_model = run_config['train_model']
+    save_results_csv = run_config['save_results_csv']
+    hp_tune = run_config['hp_tune']
+    hp_tune_vals = run_config['hp_tune_vals']
+    fine_tune = run_config['fine_tune']
+    weights_dir = run_config['weights_dir']
+    #oos_sites = run_config['oos_sites']
+    multi_site = True
+    
+    #model_run_dir = os.path.join('03_model/out/multi_site', model_run_id)
+    input_file_loc = os.path.join('03_model/out/multi_site',model_run_id)
+    
+    for j in range(n_reps):
+        rep = 'Rep_0'+str(j)
+        run_id = os.path.join('03_model/out/multi_site',model_run_id,rep)
+        out_dir = os.path.join('03_model/out/multi_site',model_run_id,rep)
+        #weights_dir = os.path.join('03_model/out/multi_site/Run_07_OOS',rep)
+        
+        if j == 0:
+            read_input_data_from_file = False
+        else:
+            read_input_data_from_file = True
+            input_file_loc = os.path.join('03_model/out/multi_site',model_run_id,'Rep_00')
+        
+        run_multi_site_model_c(netcdf_loc, config_loc, site_no_list, station_nm_list, 
+                   read_input_data_from_file, input_file_loc, out_dir, run_id,
+                   train_model, multi_site, fine_tune, weights_dir, hp_tune, hp_tune_vals, save_results_csv)
+
+def run_single_site_model_c(netcdf_loc, config_loc, site_no, station_nm, read_input_data_from_file, input_file_loc, out_dir, run_id, train_model, multi_site, hp_tune, hp_tune_vals, weights_dir, save_results_csv):
     os.makedirs(out_dir, exist_ok = True)
     
     if read_input_data_from_file:
         with open(os.path.join(input_file_loc,'prepped_data'), 'rb') as input_data:
             site_data = pickle.load(input_data)
-        with open(os.path.join(input_file_loc,'n_means_stds'), 'rb') as means_stds:
+        with open(os.path.join(input_file_loc,'n_means_stds_n_obs'), 'rb') as means_stds:
             n_means_stds = pickle.load(means_stds)
             print('Reading input data from '+ out_dir)
     else:         
@@ -506,10 +556,162 @@ def run_single_site_model_c(netcdf_loc, config_loc, site_no, station_nm, read_in
     if train_model:  
         train_lstm(config_loc, site_data, out_dir, hp_tune, hp_tune_vals)
     
-    lstm_predictions = make_predictions_lstm(config_loc, out_dir, site_data, hp_tune, hp_tune_vals, weights_dir)    
+    lstm_predictions = make_predictions_lstm(config_loc, out_dir, site_data, hp_tune, hp_tune_vals, train_model, weights_dir)    
+    
+    #config_loc, out_dir, site_data, hp_tune, hp_tune_vals, train_model, weights_dir
     
     preds_unnorm = unnormalize_lstm_prediction(config_loc, lstm_predictions, n_means_stds)
         
     site_dict = save_results(config_loc, preds_unnorm, site_data, out_dir, station_nm, site_no, hp_tune, hp_tune_vals, save_results_csv, run_id, multi_site)
     return site_dict
-#%%
+
+def wrapper_run_single_site_model_c(run_config_loc):
+    with open(run_config_loc) as stream:
+        run_config = yaml.safe_load(stream) 
+        
+    site_info = pd.read_csv(run_config['site_info_loc'],  dtype = {'site_no':str}).iloc[0:3,:]
+    site_no_list = site_info.site_no
+    station_nm_list = site_info[site_info.site_no.isin(site_no_list)].station_nm
+    
+    
+    model_run_id = run_config['model_run_id']
+    model_run_dir = os.path.join('03_model/out/single_site', model_run_id)
+    netcdf_loc = run_config['netcdf_loc']
+    config_loc = run_config['config_loc']
+    read_input_data_from_file = run_config['read_input_data_from_file']
+    n_reps = run_config['n_reps']
+    train_model = run_config['train_model']
+    save_results_csv = run_config['save_results_csv']
+    hp_tune = run_config['hp_tune']
+    hp_tune_vals = run_config['hp_tune_vals']
+    weights_dir = run_config['weights_dir']
+    #fine_tune = run_config['fine_tune']
+    #oos_sites = run_config['oos_sites']
+    multi_site = False
+    
+    
+    #run n replicates
+    for j in range(n_reps):
+        run_id = os.path.join(model_run_id,  ('Rep_0'+str(j)))
+        
+        all_sites_results_list = [] 
+        
+        for i,site in enumerate(site_info.site_no): 
+            site_no_list = site
+            
+            #if it isn't the first rep use the data that has been processed for rep 0
+            if j == 0:
+                read_input_data_from_file = False
+                input_file_loc = os.path.join(model_run_dir,  ('Rep_0'+str(j)))
+            else:
+                read_input_data_from_file = True
+                input_file_loc = os.path.join(model_run_dir, 'Rep_00', site)
+                
+            station_nm_list = list(site_info[site_info.site_no == site].station_nm)
+            out_dir = os.path.join(model_run_dir,  ('Rep_0'+str(j)), site)
+        
+            site_perf = run_single_site_model_c(netcdf_loc, config_loc, site_no_list, station_nm_list, 
+                                   read_input_data_from_file, input_file_loc, out_dir, run_id,
+                                   train_model, multi_site, hp_tune, hp_tune_vals, weights_dir, save_results_csv)
+        
+            all_sites_results_list.append(site_perf)
+            
+        all_sites_results_df = pd.DataFrame(all_sites_results_list)
+        all_sites_results_df.to_csv(os.path.join(model_run_dir,  ('Rep_0'+str(j)),"AllSitesModelResults.csv"))
+    
+def wrapper_single_site_model_hyperparameter_tuning(run_config_loc):
+    
+    with open(run_config_loc) as stream:
+            run_config = yaml.safe_load(stream) 
+            
+    model_run_id = run_config['model_run_id']
+    #model_run_dir = os.path.join('03_model/out/single_site', model_run_id)
+    netcdf_loc = run_config['netcdf_loc']
+    config_loc = run_config['config_loc']
+    read_input_data_from_file = run_config['read_input_data_from_file']
+    n_reps = run_config['n_reps']
+    train_model = run_config['train_model']
+    save_results_csv = run_config['save_results_csv']
+
+    hp_tune = run_config['hp_tune']
+    sl = run_config['sl']
+    lr = run_config['lr']
+    l = run_config['l']
+    ncl = run_config['ncl']
+    hp_tune_vals = list(itertools.product(sl,lr,l,ncl))
+    
+    #these are the indices of the first hp set with a new sequence length
+    #we'll call back to these to reuse the data
+    first_seq_len = []
+    hp_tune_vals_df = pd.DataFrame(hp_tune_vals)
+    for seq_len_hp in sl:
+        first_seq_len.append(hp_tune_vals_df[hp_tune_vals_df[0] == seq_len_hp].index[0])
+    
+    weights_dir = run_config['weights_dir']
+    multi_site = False
+    
+    for rep in range(n_reps):
+        
+        all_sites_results_list = [] 
+            
+        #randomly select n sites for hyperparameter tuning
+        site_info = pd.read_csv(run_config['site_info_loc'],  dtype = {'site_no':str}).sample(3)
+        site_no_list = site_info.site_no
+        station_nm_list = site_info[site_info.site_no.isin(site_no_list)].station_nm
+        
+        model_run_rep_id = os.path.join('03_model/out/single_site',model_run_id, 'Rep_'+str(rep).zfill(2))
+        
+        for i,hp in enumerate(hp_tune_vals):
+            HP_Run_pad = str(i).zfill(2)
+            model_HP_run_id = 'HP_'+HP_Run_pad
+            model_rep_HP_dir = os.path.join(model_run_rep_id,model_HP_run_id)
+            #print(model_HP_run_dir)
+            hp_tune_vals_run = {'seq_len':hp_tune_vals[i][0],'learning_rate':hp_tune_vals[i][1], 
+                            'num_layers':hp_tune_vals[i][2], 'num_cells':hp_tune_vals[i][3]}
+            #print(hp_tune_vals_run)
+            
+            input_file_dir = model_run_rep_id
+            #if the sequence length is the same as a previous run then don't reproduce the data
+            if i == 0:
+                data_source = 'FIRST SET OF HYPERPARAMETERS'
+                read_input_data_from_file = False
+            elif hp_tune_vals_run['seq_len'] == hp_tune_vals[i-1][0]:
+                data_source = "READING HYPERPARAMETER VALUES FROM FILE"
+                read_input_data_from_file = True
+                #find the previous directory that had the same seqence length
+                HP_Run_pad_read = str(int(math.floor((i)/(len(hp_tune_vals)/len(sl)))*(len(hp_tune_vals)/len(sl)))).zfill(2)
+                print(HP_Run_pad_read)
+                model_HP_run_id_read = 'HP_'+HP_Run_pad_read
+                input_file_dir = os.path.join(model_run_rep_id,model_HP_run_id_read)
+            else:
+                data_source = "FIRST INSTANCE OF THIS SEQUENCE LENGTH -- PREPARING DATA"
+                read_input_data_from_file = False
+                              
+            print('-----------------------------------------------------------------------')
+            print('HP Set '+str(i+1)+' of '+str(len(hp_tune_vals)))
+            print(hp_tune_vals_run)
+            print('Rep '+str(rep+1)+' of '+ str(n_reps))
+            print(data_source)
+            if data_source == "READING HYPERPARAMETER VALUES FROM FILE":
+                print(input_file_dir)
+            print('-----------------------------------------------------------------------')
+            
+            all_sites_results_list = [] 
+            
+            for j,site in enumerate(site_info.site_no): 
+                site_no_list = site
+                station_nm_list = list(site_info[site_info.site_no == site].station_nm)
+                run_id = model_rep_HP_dir
+                out_dir = os.path.join(model_rep_HP_dir, site)
+                
+                #this is the location to read the data in from if it has already been created
+                input_file_loc = os.path.join(input_file_dir, site)
+            
+                site_perf = run_single_site_model_c(netcdf_loc, config_loc, site_no_list, station_nm_list, 
+                                       read_input_data_from_file, input_file_loc, out_dir, run_id,
+                                       train_model, multi_site, hp_tune = hp_tune, hp_tune_vals = hp_tune_vals_run, weights_dir = weights_dir, save_results_csv = save_results_csv)
+            
+                all_sites_results_list.append(site_perf)
+                
+            all_sites_results_df = pd.DataFrame(all_sites_results_list)
+            all_sites_results_df.to_csv(os.path.join(model_rep_HP_dir,"AllSitesModelResults.csv"))
