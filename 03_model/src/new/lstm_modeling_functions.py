@@ -655,7 +655,7 @@ def wrapper_single_site_model_hyperparameter_tuning(run_config_loc):
         all_sites_results_list = [] 
             
         #randomly select n sites for hyperparameter tuning
-        site_info = pd.read_csv(run_config['site_info_loc'],  dtype = {'site_no':str}).sample(3)
+        site_info = pd.read_csv(run_config['site_info_loc'],  dtype = {'site_no':str}).sample(15)
         site_no_list = site_info.site_no
         station_nm_list = site_info[site_info.site_no.isin(site_no_list)].station_nm
         

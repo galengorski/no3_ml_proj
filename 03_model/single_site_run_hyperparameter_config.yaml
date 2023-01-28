@@ -12,8 +12,8 @@ read_input_data_from_file: False
 input_file_loc : None
 save_results_csv: True
 
-model_run_id : 'Run_00_HP_TESTRUN_02'
-n_reps: 2
+model_run_id : 'Run_00_HP'
+n_reps: 10
 
 
 train_model : True
@@ -24,14 +24,14 @@ hp_tune : True
 #sequence length
 sl : [20,60,180]
 #learning rate
-#lr : [0.005,0.001]
-lr : [0.1, 0.5]
+lr : [0.005,0.001]
+#lr : [0.1, 0.5]
 #number of layers
-l : [1]
-#l : [1,2,4]
+#l : [1]
+l : [1,2,4]
 #number of cells
-#ncl : [10,20,40]
-ncl : [2]
+ncl : [10,20,40]
+#ncl : [2]
 
 #fine tune for transfer learning
 fine_tune : False
