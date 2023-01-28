@@ -136,7 +136,7 @@ def train_lstm(config_loc, concat_model_data, out_dir, hp_tune, hp_tune_vals, fi
         learning_rate = config['learning_rate']
         seq_len = config['seq_len']
         num_layers = config['num_layers']
-        hidden_size = hp_tune_vals['hidden_size']
+        hidden_size = config['hidden_size']
         
     feat_list = config['feat_list']
     if config['static_features_used']:

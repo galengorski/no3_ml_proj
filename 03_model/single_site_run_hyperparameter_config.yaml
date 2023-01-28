@@ -12,7 +12,7 @@ read_input_data_from_file: False
 input_file_loc : None
 save_results_csv: True
 
-model_run_id : 'Run_00_HP_TESTRUN_01'
+model_run_id : 'Run_00_HP_TESTRUN_02'
 n_reps: 2
 
 
