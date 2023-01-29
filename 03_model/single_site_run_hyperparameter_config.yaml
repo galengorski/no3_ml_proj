@@ -23,9 +23,10 @@ hp_tune : True
 #tune across these values
 #sequence length
 sl : [20,60,180]
+#sl : [10]
 #learning rate
 lr : [0.005,0.001]
-#lr : [0.1, 0.5]
+#lr : [0.1]#, 0.5]
 #number of layers
 #l : [1]
 l : [1,2,4]

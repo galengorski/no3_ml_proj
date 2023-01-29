@@ -180,7 +180,8 @@ def train_lstm(config_loc, concat_model_data, out_dir, hp_tune, hp_tune_vals, fi
     t = time.time()
     print("Training in progress...")
     for epoch in np.arange(num_epochs):
-        print("\nEpoch {}/{}".format(epoch+1, num_epochs))
+        if(int(epoch) % 10) == 0:
+            print("\nEpoch {}/{}".format(epoch+1, num_epochs))
         with tqdm.tqdm(total=np.floor(train_dataset.len / batch_size), position=0, leave=True) as progress_bar:
             for i, data in enumerate(train_loader):
                 sequence, label = data
@@ -650,7 +651,7 @@ def wrapper_single_site_model_hyperparameter_tuning(run_config_loc):
     weights_dir = run_config['weights_dir']
     multi_site = False
     
-    for rep in range(2, n_reps):
+    for rep in range(3, n_reps):
         
         all_sites_results_list = [] 
             
