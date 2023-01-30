@@ -651,7 +651,7 @@ def wrapper_single_site_model_hyperparameter_tuning(run_config_loc):
     weights_dir = run_config['weights_dir']
     multi_site = False
     
-    for rep in range(3, n_reps):
+    for rep in range(4, n_reps):
         
         all_sites_results_list = [] 
             
