@@ -14,7 +14,7 @@ static_features_used: False
 #number of replicates
 reps: 10
 #sequence length
-seq_len: 20
+seq_len: 180
 #train fraction
 trn_frac: 0.5625
 #validation fraction 
@@ -41,4 +41,4 @@ shuffle: True
 #when do you want to predict, two options are "train_val" and "full"
 #if "full" is chosen then the model will be trained with the sum of trn_frac
 # and val_frac
-predict_period: 'train_val'
+predict_period: 'full'

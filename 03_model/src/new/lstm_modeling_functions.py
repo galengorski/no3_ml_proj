@@ -180,13 +180,13 @@ def train_lstm(config_loc, concat_model_data, out_dir, hp_tune, hp_tune_vals, fi
     t = time.time()
     print("Training in progress...")
     for epoch in np.arange(num_epochs):
-        if(int(epoch) % 10) == 0:
+        if(int(epoch+1) % 16) == 0:
             print("\nEpoch {}/{}".format(epoch+1, num_epochs))
-        with tqdm.tqdm(total=np.floor(train_dataset.len / batch_size), position=0, leave=True) as progress_bar:
-            for i, data in enumerate(train_loader):
-                sequence, label = data
-                model.update(sequence, label)         
-                progress_bar.update(1)
+        #with tqdm.tqdm(total=np.floor(train_dataset.len / batch_size), position=0, leave=True) as progress_bar:
+        for i, data in enumerate(train_loader):
+            sequence, label = data
+            model.update(sequence, label)         
+            #progress_bar.update(1)
         with torch.no_grad():
             # if config['predict_period'] == 'full':
             #     train_loss = model.loss(concat_model_data['train_val_x'], concat_model_data['train_val_y'])
@@ -197,7 +197,8 @@ def train_lstm(config_loc, concat_model_data, out_dir, hp_tune, hp_tune_vals, fi
                 validation_loss = model.loss(concat_model_data['test_x'], concat_model_data['test_y'])
             else:
                 validation_loss = model.loss(concat_model_data['val_x'], concat_model_data['val_y'])
-            print(train_loss.item())
+            if(int(epoch+1) % 16) == 0:
+                print("Training loss: "+ str(round(train_loss.item(), ndigits = 4)))
             running_loss.append(train_loss.item())
             valid_loss.append(validation_loss.item())
     torch.save(model.state_dict(), os.path.join(out_dir,"model_weights.pt"))
@@ -570,7 +571,7 @@ def wrapper_run_single_site_model_c(run_config_loc):
     with open(run_config_loc) as stream:
         run_config = yaml.safe_load(stream) 
         
-    site_info = pd.read_csv(run_config['site_info_loc'],  dtype = {'site_no':str}).iloc[0:3,:]
+    site_info = pd.read_csv(run_config['site_info_loc'],  dtype = {'site_no':str})
     site_no_list = site_info.site_no
     station_nm_list = site_info[site_info.site_no.isin(site_no_list)].station_nm
     
@@ -610,6 +611,10 @@ def wrapper_run_single_site_model_c(run_config_loc):
                 
             station_nm_list = list(site_info[site_info.site_no == site].station_nm)
             out_dir = os.path.join(model_run_dir,  ('Rep_0'+str(j)), site)
+            
+            print('-----------------------------------------------------------------------')
+            print('Training site: ', site, ' # ', str(i+1), ' of 46 sites')
+            print('-----------------------------------------------------------------------')
         
             site_perf = run_single_site_model_c(netcdf_loc, config_loc, site_no_list, station_nm_list, 
                                    read_input_data_from_file, input_file_loc, out_dir, run_id,
@@ -651,7 +656,7 @@ def wrapper_single_site_model_hyperparameter_tuning(run_config_loc):
     weights_dir = run_config['weights_dir']
     multi_site = False
     
-    for rep in range(4, n_reps):
+    for rep in range(n_reps):
         
         all_sites_results_list = [] 
             
