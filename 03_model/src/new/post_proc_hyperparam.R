@@ -65,72 +65,42 @@ hp_perf_grid <- merge(rep_hp_performance, hp_grid, by = 'hp_run')
 
 
 hp_perf_grid %>%
-  rename_with(.fn = paste('Number of Cells'), ncells)
-  ggplot(aes(x = seq_len, y = NRMSE_validation, color = replicate)) +
+  #rename_with(.fn = paste('Number of Cells'), ncells)
+  ggplot(aes(x = num_cells, y = NSE_validation, color = seq_len)) +
   geom_boxplot()+
-  facet_wrap(~learning_rate+num_layers+num_cells, ncol = 6)
-  #ylim(-1,1)
+  facet_wrap(~num_layers+learning_rate, ncol = 3)+
+  ylim(-1,1)
 
 
+hp_perf_grid %>%
+  group_by(hp_run) %>%
+  summarize(median_NSE = median(NSE_validation), median_NRMSE = median(NRMSE_validation), median_PBIAS = median(abs(PBIAS_validation)),
+            seq_len = first(seq_len), learning_rate = first(learning_rate), num_layers = first(num_layers),
+            num_cells = first(num_cells)) %>%
+  filter(learning_rate == 0.005, seq_len == 180, num_layers == 2) %>%
+  #arrange(desc(median_NSE))
+  arrange(median_NRMSE)
+  arrange(median_PBIAS)
 
-runs <- c('00','01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16')
-runs_perf <- list()
-for (j in 1:length(runs)){
-sites <- list.files(paste0('~/Google Drive/My Drive/ESDL Postdoc/02_Projects/no3_ml_proj/03_model/out/multi_site/hyper_param_tune/HP_Run_',runs[j]), full.names = TRUE)
+hp_perf_grid %>%
+  arrange(median_NRMSE)
+  
+  
+unique_site <- hp_perf_grid$Site_name %>% 
+  unique()
 
-runs_perf[[j]] <- data.frame()
-
-for(i in 1:(length(sites)-2)){
-a <- read.table(paste0(sites[i],'/model_param_output.txt'), header = FALSE, sep = ':', fill = TRUE)
-b <- data.frame(t(a[,2])) 
-colnames(b) <- a[,1]
-runs_perf[[j]] <- rbind(runs_perf[[j]], b)
+for(i in 1:length(unique_site)){
+  site_hp <- hp_perf_grid %>%
+    filter(Site_name == unique_site[i]) %>%
+    ggplot(aes(x = num_cells, y = RMSE_validation, color = seq_len)) +
+    geom_jitter()+
+    facet_wrap(~num_layers+learning_rate, ncol = 2)+
+    #ylim(-1,1)+
+    ggtitle(unique_site[i])
+  print(site_hp)
 }
-
-#summary(as.numeric(perf$NSE_Training))
-#summary(as.numeric(perf$NSE_Validation))
-
-}
-
-
-
-runs_perf_df <- as.data.frame(do.call(rbind, runs_perf)) %>%
-  as_tibble()
-
-runs_perf_df %>%
-  group_by(`Learning rate`, `Batch Size`) %>%
-  mutate(`Learning rate` = as.numeric(`Learning rate`)) %>%
-  filter(`Learning rate` > 5e-04) %>%
-  dplyr::summarise(NSE_Valid = median(as.numeric(NSE_Validation)),
-                   NSE_Training = median(as.numeric(NSE_Training)),
-                   RMSE_Valid = median(as.numeric(RMSE_Validation)),
-                   RMSE_Training = median(as.numeric(RMSE_Training))) %>%
-  arrange(RMSE_Valid)
-
-#NSE
-runs_perf_df %>%
-  dplyr::select(`Station Name`, `Site Number`, `Learning rate`, `Batch Size`, RMSE_Training, RMSE_Validation, NSE_Training, NSE_Validation) %>%
-  pivot_longer(cols = c(NSE_Training, NSE_Validation)) %>%
-  mutate(NSE = as.numeric(value)) %>%
-  mutate(`Batch Size` = as.numeric(`Batch Size`)) %>%
-  mutate(`Batch Size` = factor(`Batch Size`)) %>%
-  mutate(`Learning rate` = as.numeric(`Learning rate`)) %>%
-  filter(`Learning rate` > 5e-04) %>%
-  ggplot(aes(x = `Batch Size`, y = NSE, fill = name))+
-  geom_boxplot()+
-  facet_wrap(.~`Learning rate`, nrow = 1) +
-  ylim(-10,1)
-
-#RMSE
-runs_perf_df %>%
-  dplyr::select(`Station Name`, `Site Number`, `Learning rate`, `Batch Size`, RMSE_Training, RMSE_Validation, NSE_Training, NSE_Validation) %>%
-  pivot_longer(cols = c(RMSE_Training, RMSE_Validation)) %>%
-  mutate(RMSE = as.numeric(value)) %>%
-  mutate(`Batch Size` = as.numeric(`Batch Size`)) %>%
-  mutate(`Batch Size` = factor(`Batch Size`)) %>%
-  mutate(`Learning rate` = as.numeric(`Learning rate`)) %>%
-  filter(`Learning rate` > 5e-04) %>%
-  ggplot(aes(x = `Batch Size`, y = RMSE, fill = name))+
-  geom_boxplot()+
-  facet_wrap(.~`Learning rate`, nrow = 1) +
-  ylim(0,10)
+  
+  
+  
+  
+  

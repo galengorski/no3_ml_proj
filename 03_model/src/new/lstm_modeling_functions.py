@@ -336,18 +336,17 @@ def save_results(config_loc, preds_unnorm, site_data, out_dir, station_nm, site_
         else:
             full_df.to_csv(os.path.join(out_dir,"ModelResults.csv"))
 
-    sns.set(rc={'figure.figsize':(30,20)})
-    sns.set_context("poster", font_scale=1.2)
-    sns.set_style(style = 'white')
+    #plot the results
+    plt.plot(full_df.Labeled, c = 'black', label = 'Observed')
+    plt.plot(full_df[full_df['Train/Val/Test'] == 'Training'].Predicted, c = 'dodgerblue', label = 'Training')
+    plt.plot(full_df[full_df['Train/Val/Test'] != 'Training'].Predicted, c = 'blue', label = plot_label_set)
+    plt.legend()
+    plt.xlabel('Date')
+    plt.xticks(rotation=45, ha='right')
+    plt.ylabel('Nitrate mg/L [NO3+NO2]')
+    plt.title("Predicting Nitrate at "+str(station_nm)) 
+    plt.tight_layout()
     
-    p=sns.lineplot(data = full_df, x = "DateTime", y = "Labeled", label="Observed", color = 'black')
-    #ptq
-    sns.lineplot(data = full_df[full_df["Train/Val/Test"] == "Training"], x = "DateTime", y = "Predicted", color = 'dodgerblue', label = 'Training')
-    sns.lineplot(data = full_df[full_df['Train/Val/Test'] != "Training"], x = "DateTime", y = "Predicted", color = 'blue', label = plot_label_set)
-    # Set title and labels for axes
-    p.set(xlabel="Date",
-           ylabel='Nitrate mg/L [NO3+NO2]',
-           title="Predicting Nitrate at "+str(station_nm))
     if multi_site:
         plt.savefig(os.path.join(out_dir, site_no,"model_summary.png"))
     else:

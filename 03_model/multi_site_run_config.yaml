@@ -11,9 +11,8 @@ weights_dir: ''
 read_input_data_from_file: False
 input_file_loc : None
 
-model_run_id : 'Run_09_OOS_PRED'
+model_run_id : 'Run_00_Full_230131'
 n_reps: 10
-rep : 'Rep_TEST00'
 
 
 train_model : True
