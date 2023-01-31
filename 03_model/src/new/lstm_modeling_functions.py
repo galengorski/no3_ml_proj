@@ -505,7 +505,7 @@ def wrapper_run_multi_site_model_c(run_config_loc):
         run_config = yaml.safe_load(stream) 
         
     site_info = pd.read_csv(run_config['site_info_loc'],  dtype = {'site_no':str})
-    site_no_list = site_info.site_no[0:3]
+    site_no_list = site_info.site_no
     station_nm_list = site_info[site_info.site_no.isin(site_no_list)].station_nm
     
     
@@ -550,7 +550,8 @@ def run_single_site_model_c(netcdf_loc, config_loc, site_no, station_nm, read_in
             site_data = pickle.load(input_data)
         with open(os.path.join(input_file_loc,'n_means_stds_n_obs'), 'rb') as means_stds:
             n_means_stds = pickle.load(means_stds)
-            print('Reading input data from '+ out_dir)
+            print('Reading input data from '+ input_file_loc)
+            print('Writing results to '+ out_dir)
     else:         
         #prepare the data
         site_data, n_means_stds = ppf.full_prepare_single_site_data(netcdf_loc, config_loc, site_no, station_nm, out_dir, hp_tune, hp_tune_vals)

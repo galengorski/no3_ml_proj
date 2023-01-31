@@ -4,47 +4,21 @@
 feat_list: ['Nitrate','Discharge','Precip','TempMax','TempMin','SolarRad']
 #are static features used
 static_features_used: True
-static_features: ['TOT_BASIN_AREA',
-                    'TOT_BASIN_SLOPE', 
-                    'lat','long',
-                    #'TOT_STREAM_SLOPE',#
-                    'TOT_STREAM_LENGTH',
-                    'TOT_STRM_DENS',
-                    'TOT_CANALDITCH',
-                    #'TOT_ARTIFICIAL',#
-                    'TOT_HGA','TOT_HGAD',
-                    #'TOT_HGB',#
-                    #'TOT_HGBC',#
-                    'TOT_HGBD',
-                    'TOT_HGC',
-                    #'TOT_HGCD','TOT_HGD',#
-                    'TOT_N97',
-                    'TOT_BFI', #
-                    'TOT_CONTACT', #
-                    'TOT_RECHG', 'TOT_WB5100_ANN', 'TOT_CWD', 'TOT_ET','TOT_RH',
-                    #'TOT_TAV7100_ANN', 
-                    #'TOT_WDANN',
-                    'TOT_PPT7100_ANN',
-                    'TILE_DRAIN',
-                    'TOT_NPDES_MAJ','TOT_NPDES_MAJ_DENS',
-                    'TOT_LAKEPOND',
-                    #'TOT_RESERVOIR','TOT_SRL55AG',#
-                    'TOT_MAJOR2013',#
-                    #'TOT_NDAMS2013',#
-                    'TOT_NID_STORAGE2013',#
-                    #'TOT_NORM_STORAGE2013',#
-                    'DTW',
-                    'TRANSM',#
-                    'UNSAT_TT',
-                    'WCON',#
-                    'NO3_DOM',#
-                    'NO3_PUB',#
-                    #'fert_uN_mt_sqkm',
-                    #'NLCD_DEV',#
-                    'NLCD_FOR','NLCD_AG',
-                    'NLCD_WTLND']#
+static_features: ['TOT_BASIN_AREA', 'TOT_BASIN_SLOPE', 
+                    'lat', 'long', 
+                    'TOT_STREAM_SLOPE', 'TOT_STREAM_LENGTH', 'TOT_STRM_DENS', 
+                    'TOT_CANALDITCH', 'TOT_ARTIFICIAL', 
+                    'TOT_HGA', 'TOT_HGAD', 'TOT_HGB', 'TOT_HGBC', 'TOT_HGBD', 'TOT_HGC', 'TOT_HGCD', 'TOT_HGD', 
+                    'TOT_N97', 
+                    'TOT_BFI', 'TOT_CONTACT', 'TOT_RECHG', 
+                    'TOT_WB5100_ANN', 'TOT_CWD', 'TOT_ET', 'TOT_RH', 'TOT_WDANN', 'TOT_PPT7100_ANN', 
+                    'TILE_DRAIN', 'TOT_NPDES_MAJ', 'TOT_NPDES_MAJ_DENS', 'TOT_LAKEPOND', 'TOT_RESERVOIR', 
+                    'TOT_SRL55AG', 'TOT_MAJOR2013', 'TOT_NDAMS2013', 'TOT_NID_STORAGE2013', 'TOT_NORM_STORAGE2013', 
+                    'DTW', 'TRANSM', 'UNSAT_TT', 'WCON', 'NO3_DOM', 'NO3_PUB', 
+                    'fert_uN_mt_sqkm', 
+                    'NLCD_DEV', 'NLCD_FOR', 'NLCD_AG', 'NLCD_WTLND']
 #sequence length
-seq_len: 20
+seq_len: 180
 #train fraction
 trn_frac: 0.5625
 #validation fraction 
@@ -53,17 +27,17 @@ val_frac: 0.1875
 test_frac: 0.25
 #number of features used
 num_features: 40   
-learning_rate: 0.001
+learning_rate: 0.005
 num_epochs: 64
 batch_size: 512
 #number of layers
-num_layers: 4
+num_layers: 2
 #dropout fraction
 dropout: 0
 #weight decay for optimizer
 weight_decay: 0.001
 #number of cells
-hidden_size: 80
+hidden_size: 20
 #should input data be shuffled
 shuffle: True
 #use existing data that has been prepared

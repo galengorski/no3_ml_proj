@@ -34,7 +34,7 @@ for j in range(5):
     
     site_info = pd.read_csv('04_analysis/out/basin_char_w_clusters_hydroterranes_221005.csv',  dtype = {'site_no':str, 'cluster_01':str, 'cluster_02':str})
     #generate out of sample sites
-    oos_sites = site_info.groupby('cluster_01', group_keys = False).apply(lambda x: x.sample(1))[['site_no','cluster_01']]
+    oos_sites = site_info.groupby('cluster_01', group_keys = False).apply(lambda x: x.sample(1))[['site_no','cluster_01','hydro_terrane']]
     
     site_info.drop(oos_sites.index, inplace = True)
 

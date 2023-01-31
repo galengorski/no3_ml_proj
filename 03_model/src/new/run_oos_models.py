@@ -22,7 +22,7 @@ site_info = pd.read_csv('04_analysis/out/basin_char_w_clusters_hydroterranes_221
 #input file location
 read_input_data_from_file = False
 input_file_loc = None
-model_run_id = 'Run_08_OOS_PRED'
+model_run_id = 'Run_09_OOS_PRED'
 model_run_dir = os.path.join('03_model/out/multi_site',model_run_id)
 train_model = False
 save_results_csv = False
