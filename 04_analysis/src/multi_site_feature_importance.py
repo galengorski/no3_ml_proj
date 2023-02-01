@@ -118,7 +118,7 @@ def save_plot_feature_importance(model_run_id, feat_imp_reps, feat_list):
 
 #%%
 if __name__ == "__main__":
-    with open(os.path.join('03_model/out/multi_site',model_run_id,'Rep_00/prepped_data', 'rb')) as input_data:
+    with open(os.path.join('03_model/out/multi_site',model_run_id,'Rep_00/prepped_data'), 'rb') as input_data:
             concat_model_data = pickle.load(input_data)
                 
     feat_imp_reps = calc_feature_importance_reps(model_run_id, hidden_size, seq_len, num_layers, dropout, learning_rate, weight_decay, concat_model_data, feat_list, n_reps)
