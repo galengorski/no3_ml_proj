@@ -10,6 +10,7 @@ sys.path.append('03_model/src/new')
 import lstm_modeling_functions as lmf
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 import pandas as pd
 import pickle
 import torch
@@ -69,7 +70,7 @@ def calc_feature_importance_reps(model_run_id, concat_data, hidden_size, seq_len
         model = lmf.LSTM_layer(num_features, hidden_size, seq_len, num_layers, dropout, learning_rate, weight_decay)
         model = model.to(device)
         #load the model weights
-        model.load_state_dict(torch.load("03_model/out/multi_site/"+model_run_id+"/Rep_0"+str(i)+"/model_weights.pt"))
+        model.load_state_dict(torch.load(os.path.join("03_model/out/multi_site/"+model_run_id+"/Rep_0"+str(i)+"/model_weights.pt")))
     
         feat_imp = calc_permutation_feature_importance(model, concat_model_data, feat_list)
         
@@ -101,12 +102,12 @@ def save_plot_feature_importance(model_run_id, feat_imp_reps, feat_list):
     ax.set_title('Feature importance')
     plt.tight_layout()
     plt.show()
-    fig.savefig('04_analysis/figs/Multi_Site_Feature_Importance'+model_run_id+'.png')
+    fig.savefig(os.path.join('04_analysis/figs/Multi_Site_Feature_Importance'+model_run_id+'.png'))
 
     multi_site_feature_imp = pd.DataFrame({'feat': feat_list[1:], 'feat_imp_mean' : feat_imp_mean, 'feat_imp_std' : imp_error})
     
     
-    multi_site_feature_imp.to_csv('04_analysis/out/multi_site_ensemble_feature_importance'+model_run_id+'.csv')
+    multi_site_feature_imp.to_csv(os.path.join('04_analysis/out/multi_site_ensemble_feature_importance'+model_run_id+'.csv'))
 
     multi_site_feature_imp[multi_site_feature_imp['feat_imp_mean'] >= 0.25].sort_values(by = 'feat_imp_mean', ascending= False)
 
@@ -117,7 +118,7 @@ def save_plot_feature_importance(model_run_id, feat_imp_reps, feat_list):
 
 #%%
 if __name__ == "__main__":
-    with open('03_model/out/multi_site',model_run_id,'Rep_00/prepped_data', 'rb') as input_data:
+    with open(os.path.join('03_model/out/multi_site',model_run_id,'Rep_00/prepped_data', 'rb')) as input_data:
             concat_model_data = pickle.load(input_data)
                 
     feat_imp_reps = calc_feature_importance_reps(model_run_id, hidden_size, seq_len, num_layers, dropout, learning_rate, weight_decay, concat_model_data, feat_list, n_reps)
