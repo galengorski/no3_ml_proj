@@ -5,6 +5,8 @@ Created on Sun Aug  7 18:42:26 2022
 
 @author: galengorski
 """
+import sys
+sys.path.append('03_model/src/new')
 import lstm_modeling_functions as lmf
 import matplotlib.pyplot as plt
 import numpy as np
