@@ -14,8 +14,6 @@ import os
 import pandas as pd
 import pickle
 import torch
-#import torch.nn as nn
-#from torch.utils.data import Dataset, DataLoader
 import yaml
 
 #%% #read in model configs
@@ -24,9 +22,7 @@ with open('03_model/multi_site_model_config.yaml') as stream:
 
 device = 'cpu'
 learning_rate = config['learning_rate']
-#learning_rate = 0.001
 seq_len = config['seq_len']
-#seq_len = 20
 num_layers = config['num_layers']
     
 feat_list = config['feat_list']
@@ -39,16 +35,14 @@ batch_size = config['batch_size']
 dropout = config['dropout']
 weight_decay = config['weight_decay']
 hidden_size = config['hidden_size']
-#hidden_size = 20
 shuffle = config['shuffle']
 
 with open('03_model/multi_site_run_config.yaml') as stream:
     run_config = yaml.safe_load(stream) 
 
 model_run_id = run_config['model_run_id']
-#model_run_id = 'Run_04_DAM'
 n_reps = run_config['n_reps']
-#n_reps = 5
+
 
 #%%Define a permuatation feature importance function
 def calc_permutation_feature_importance(model, concat_model_data, feat_list):
@@ -67,7 +61,7 @@ def calc_permutation_feature_importance(model, concat_model_data, feat_list):
     return np.array(fi_ls)
 
 #%%calculate feature importance
-def calc_feature_importance_reps(model_run_id, concat_data, hidden_size, seq_len, num_layers, dropout, learning_rate, weight_decay, concat_model_data, feat_list, n_reps):
+def calc_feature_importance_reps(model_run_id, hidden_size, seq_len, num_layers, dropout, learning_rate, weight_decay, concat_model_data, feat_list, n_reps):
     feat_imp_reps = np.zeros([len(feat_list)-1,n_reps])
     for i in range(n_reps):
     # initialize the model
