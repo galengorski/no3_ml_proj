@@ -11,8 +11,8 @@ import numpy as np
 import pandas as pd
 import pickle
 import torch
-import torch.nn as nn
-from torch.utils.data import Dataset, DataLoader
+#import torch.nn as nn
+#from torch.utils.data import Dataset, DataLoader
 import yaml
 
 #%% #read in model configs
@@ -36,12 +36,11 @@ weight_decay = config['weight_decay']
 hidden_size = config['hidden_size']
 shuffle = config['shuffle']
 
-#%%
-with open('03_model/out/multi_site/Run_04_DAM/Rep_00/prepped_data', 'rb') as input_data:
-            concat_model_data = pickle.load(input_data)
-            
-#prepare the train val dataset
-train_val_dataset = lmf.CatchmentDataset(concat_model_data['train_val_x'], concat_model_data['train_val_y'])
+with open('03_model/multi_site_run_config.yaml') as stream:
+    run_config = yaml.safe_load(stream) 
+
+model_run_id = run_config['model_run_id']
+n_reps = run_config['n_reps']
 
 #%%Define a permuatation feature importance function
 def calc_permutation_feature_importance(model, concat_model_data, feat_list):
@@ -60,45 +59,62 @@ def calc_permutation_feature_importance(model, concat_model_data, feat_list):
     return np.array(fi_ls)
 
 #%%calculate feature importance
-feat_imp_reps = np.zeros([len(feat_list)-1,5])
-for i in range(5):
-# initialize the model
-    model = lmf.LSTM_layer(num_features, hidden_size, seq_len, num_layers, dropout, learning_rate, weight_decay)
-    model = model.to(device)
-    #load the model weights
-    model.load_state_dict(torch.load("03_model/out/multi_site/Run_04_DAM/Rep_0"+str(i)+"/model_weights.pt"))
-
-    feat_imp = calc_permutation_feature_importance(model, concat_model_data, feat_list)
+def calc_feature_importance_reps(model_run_id, hidden_size, seq_len, num_layers, dropout, learning_rate, weight_decay, concat_model_data, feat_list, n_reps):
+    feat_imp_reps = np.zeros([len(feat_list)-1,5])
+    for i in range(n_reps):
+    # initialize the model
+        model = lmf.LSTM_layer(num_features, hidden_size, seq_len, num_layers, dropout, learning_rate, weight_decay)
+        model = model.to(device)
+        #load the model weights
+        model.load_state_dict(torch.load("03_model/out/multi_site/"+model_run_id+"/Rep_0"+str(i)+"/model_weights.pt"))
     
-    feat_imp_reps[:,i] = feat_imp
+        feat_imp = calc_permutation_feature_importance(model, concat_model_data, feat_list)
+        
+        feat_imp_reps[:,i] = feat_imp
+        
+        return(feat_imp_reps)
 
 #%%
-feat_imp_mean = np.mean(feat_imp_reps, axis = 1)
-feat_imp_min = np.min(feat_imp_reps, axis = 1)
-feat_imp_max = np.max(feat_imp_reps, axis = 1)
-imp_error = np.std(feat_imp_reps, axis = 1)
+def save_plot_feature_importance(model_run_id, feat_imp_reps, feat_list):
 
-ordered_feat_imp = np.argsort(feat_imp_mean)
-np.array(feat_list[1:])[ordered_feat_imp]
-y_pos = np.arange(len(feat_list)-1)
+    feat_imp_mean = np.mean(feat_imp_reps, axis = 1)
+    #feat_imp_min = np.min(feat_imp_reps, axis = 1)
+    #feat_imp_max = np.max(feat_imp_reps, axis = 1)
+    imp_error = np.std(feat_imp_reps, axis = 1)
+    
+    ordered_feat_imp = np.argsort(feat_imp_mean)
+    np.array(feat_list[1:])[ordered_feat_imp]
+    #y_pos = np.arange(len(feat_list)-1)
+    
+    plt.rcdefaults()
+    fig, ax = plt.subplots()
+    fig.set_size_inches(18.5, 10.5)
+    
+    ax.barh(np.array(feat_list[1:])[ordered_feat_imp],feat_imp_mean[ordered_feat_imp], 
+            xerr = imp_error[ordered_feat_imp], align = 'center')
+    #ax.invert_yaxis()
+    ax.set_xlabel('Delta mse')
+    ax.set_title('Feature importance')
+    plt.tight_layout()
+    plt.show()
+    fig.savefig('04_analysis/figs/Multi_Site_Feature_Importance'+model_run_id+'.png')
 
-plt.rcdefaults()
-fig, ax = plt.subplots()
-fig.set_size_inches(18.5, 10.5)
+    multi_site_feature_imp = pd.DataFrame({'feat': feat_list[1:], 'feat_imp_mean' : feat_imp_mean, 'feat_imp_std' : imp_error})
+    
+    
+    multi_site_feature_imp.to_csv('04_analysis/out/multi_site_ensemble_feature_importance'+model_run_id+'.csv')
 
-ax.barh(np.array(feat_list[1:])[ordered_feat_imp],feat_imp_mean[ordered_feat_imp], 
-        xerr = imp_error[ordered_feat_imp], align = 'center')
-#ax.invert_yaxis()
-ax.set_xlabel('Delta mse')
-ax.set_title('Feature importance')
-plt.tight_layout()
-plt.show()
-fig.savefig('04_analysis/figs/Multi_Site_Feature_Importance_DAM.png')
+    multi_site_feature_imp[multi_site_feature_imp['feat_imp_mean'] >= 0.25].sort_values(by = 'feat_imp_mean', ascending= False)
 
 #%%
-multi_site_feature_imp = pd.DataFrame({'feat': feat_list[1:], 'feat_imp_mean' : feat_imp_mean, 'feat_imp_std' : imp_error})
-
-
-multi_site_feature_imp.to_csv('04_analysis/out/multi_site_ensemble_feature_importance.csv')
-
-multi_site_feature_imp[multi_site_feature_imp['feat_imp_mean'] >= 0.25].sort_values(by = 'feat_imp_mean', ascending= False)
+if __name__ == "main":
+    
+    with open('03_model/out/multi_site',model_run_id,'Rep_00/prepped_data', 'rb') as input_data:
+            concat_model_data = pickle.load(input_data)
+            
+    #prepare the train val dataset
+    train_val_dataset = lmf.CatchmentDataset(concat_model_data['train_val_x'], concat_model_data['train_val_y'])
+    
+    feat_imp_reps = calc_feature_importance_reps(model_run_id, hidden_size, seq_len, num_layers, dropout, learning_rate, weight_decay, concat_model_data, feat_list, n_reps)
+    
+    save_plot_feature_importance(model_run_id, feat_imp_reps, feat_list)
