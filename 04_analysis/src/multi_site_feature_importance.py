@@ -61,10 +61,11 @@ def calc_permutation_feature_importance(model, concat_model_data, feat_list):
     return np.array(fi_ls)
 
 #%%calculate feature importance
-def calc_feature_importance_reps(model_run_id, hidden_size, seq_len, num_layers, dropout, learning_rate, weight_decay, concat_model_data, feat_list, n_reps):
+def calc_feature_importance_reps(model_run_id, concat_data, hidden_size, seq_len, num_layers, dropout, learning_rate, weight_decay, concat_model_data, feat_list, n_reps):
     feat_imp_reps = np.zeros([len(feat_list)-1,5])
     for i in range(n_reps):
     # initialize the model
+        print('Calculating feature importance rep '+str(i+1))
         model = lmf.LSTM_layer(num_features, hidden_size, seq_len, num_layers, dropout, learning_rate, weight_decay)
         model = model.to(device)
         #load the model weights
@@ -78,7 +79,8 @@ def calc_feature_importance_reps(model_run_id, hidden_size, seq_len, num_layers,
 
 #%%
 def save_plot_feature_importance(model_run_id, feat_imp_reps, feat_list):
-
+    
+    print('Saving feature importance plot and data')
     feat_imp_mean = np.mean(feat_imp_reps, axis = 1)
     #feat_imp_min = np.min(feat_imp_reps, axis = 1)
     #feat_imp_max = np.max(feat_imp_reps, axis = 1)
@@ -113,10 +115,7 @@ if __name__ == "main":
     
     with open('03_model/out/multi_site',model_run_id,'Rep_00/prepped_data', 'rb') as input_data:
             concat_model_data = pickle.load(input_data)
-            
-    #prepare the train val dataset
-    train_val_dataset = lmf.CatchmentDataset(concat_model_data['train_val_x'], concat_model_data['train_val_y'])
-    
+                
     feat_imp_reps = calc_feature_importance_reps(model_run_id, hidden_size, seq_len, num_layers, dropout, learning_rate, weight_decay, concat_model_data, feat_list, n_reps)
     
     save_plot_feature_importance(model_run_id, feat_imp_reps, feat_list)
