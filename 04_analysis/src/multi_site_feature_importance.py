@@ -23,10 +23,10 @@ with open('03_model/multi_site_model_config.yaml') as stream:
     config = yaml.safe_load(stream)  
 
 device = 'cpu'
-#learning_rate = config['learning_rate']
-learning_rate = 0.001
-#seq_len = config['seq_len']
-seq_len = 20
+learning_rate = config['learning_rate']
+#learning_rate = 0.001
+seq_len = config['seq_len']
+#seq_len = 20
 num_layers = config['num_layers']
     
 feat_list = config['feat_list']
@@ -38,17 +38,17 @@ num_features = config['num_features']
 batch_size = config['batch_size']
 dropout = config['dropout']
 weight_decay = config['weight_decay']
-#hidden_size = config['hidden_size']
-hidden_size = 20
+hidden_size = config['hidden_size']
+#hidden_size = 20
 shuffle = config['shuffle']
 
 with open('03_model/multi_site_run_config.yaml') as stream:
     run_config = yaml.safe_load(stream) 
 
-#model_run_id = run_config['model_run_id']
-model_run_id = 'Run_04_DAM'
-#n_reps = run_config['n_reps']
-n_reps = 5
+model_run_id = run_config['model_run_id']
+#model_run_id = 'Run_04_DAM'
+n_reps = run_config['n_reps']
+#n_reps = 5
 
 #%%Define a permuatation feature importance function
 def calc_permutation_feature_importance(model, concat_model_data, feat_list):
