@@ -747,7 +747,9 @@ def wrapper_run_cluster_model(run_config_loc):
         rep = 'Rep_0'+str(j)
          
         for group in np.sort(site_info.cluster_01.unique()):
-            print(group,'of ',len(site_info.cluster_01.unique()),' groups')
+            print('-----------------------------------------------------------------------')
+            print('Training group ', group, ' of 7 | replicate #', str(j+1), 'of ', str(n_reps))
+            print('-----------------------------------------------------------------------')
             site_no_list = site_info[site_info['cluster_01'] == group].site_no
             station_nm_list = site_info[site_info['cluster_01'] == group].station_nm
             run_id = os.path.join(model_run_id, rep,  'Cluster_0'+str(group))
@@ -761,7 +763,49 @@ def wrapper_run_cluster_model(run_config_loc):
             run_multi_site_model_c(netcdf_loc, config_loc, site_no_list, station_nm_list, 
                        read_input_data_from_file, input_file_loc, out_dir, run_id,
                        train_model, multi_site, fine_tune, weights_dir, hp_tune, hp_tune_vals, save_results_csv)
+
+
+def wrapper_run_hydroterrane_model(run_config_loc):
+    with open(run_config_loc) as stream:
+        run_config = yaml.safe_load(stream) 
+        
+    site_info = pd.read_csv(run_config['site_info_loc'],  dtype = {'site_no':str})    
+    
+    model_run_id = run_config['model_run_id']
+    netcdf_loc = run_config['netcdf_loc']
+    config_loc = run_config['config_loc']
+    read_input_data_from_file = run_config['read_input_data_from_file']
+    n_reps = run_config['n_reps']
+    train_model = run_config['train_model']
+    save_results_csv = run_config['save_results_csv']
+    hp_tune = run_config['hp_tune']
+    hp_tune_vals = run_config['hp_tune_vals']
+    fine_tune = run_config['fine_tune']
+    weights_dir = run_config['weights_dir']
+    #oos_sites = run_config['oos_sites']
+    multi_site = True
+    
+    input_file_loc = os.path.join('03_model/out/multi_site',model_run_id)
+    
+    for j in range(n_reps):
+        rep = 'Rep_0'+str(j)
+         
+        for k, group in enumerate(np.sort(site_info.hydro_terrane.unique())):
             print('-----------------------------------------------------------------------')
-            print('Training group ', group, ' of 8 sites | replicate #', str(n_reps+1))
+            print('Training ', group, ' | group', str(k+1), ' of 8 hydroterranes | replicate #', str(j+1), 'of ', str(n_reps))
             print('-----------------------------------------------------------------------')
+            site_no_list = site_info[site_info['hydro_terrane'] == group].site_no
+            station_nm_list = site_info[site_info['hydro_terrane'] == group].station_nm
+            run_id = os.path.join(model_run_id, rep,  'hydro_terrane'+str(group))
+            out_dir = os.path.join('03_model/out/multi_site', model_run_id, rep,  'Terrane_'+str(group))
+            if j == 0:
+                read_input_data_from_file = False
+            else:
+                read_input_data_from_file = True
+                input_file_loc = os.path.join('03_model/out/multi_site',model_run_id,'Rep_00','Terrane'+str(group))
+            
+            run_multi_site_model_c(netcdf_loc, config_loc, site_no_list, station_nm_list, 
+                       read_input_data_from_file, input_file_loc, out_dir, run_id,
+                       train_model, multi_site, fine_tune, weights_dir, hp_tune, hp_tune_vals, save_results_csv)
+
 
