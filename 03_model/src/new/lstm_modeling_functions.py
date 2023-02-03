@@ -787,7 +787,7 @@ def wrapper_run_hydroterrane_model(run_config_loc):
     
     input_file_loc = os.path.join('03_model/out/multi_site',model_run_id)
     
-    for j in range(n_reps):
+    for j in range(1,n_reps):
         rep = 'Rep_0'+str(j)
          
         for k, group in enumerate(np.sort(site_info.hydro_terrane.unique())):
@@ -802,7 +802,7 @@ def wrapper_run_hydroterrane_model(run_config_loc):
                 read_input_data_from_file = False
             else:
                 read_input_data_from_file = True
-                input_file_loc = os.path.join('03_model/out/multi_site',model_run_id,'Rep_00','Terrane'+str(group))
+                input_file_loc = os.path.join('03_model/out/multi_site',model_run_id,'Rep_00','Terrane_'+str(group))
             
             run_multi_site_model_c(netcdf_loc, config_loc, site_no_list, station_nm_list, 
                        read_input_data_from_file, input_file_loc, out_dir, run_id,
