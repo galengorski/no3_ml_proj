@@ -46,7 +46,7 @@ dropout: 0
 #weight decay for optimizer
 weight_decay: 0.001
 #number of cells
-hidden_size: 20
+hidden_size: 40
 #should input data be shuffled
 shuffle: True
 #use existing data that has been prepared

@@ -11,8 +11,8 @@ weights_dir: ''
 read_input_data_from_file: False
 input_file_loc : None
 
-model_run_id : 'Run_04_MS_4Layer_230203'
-n_reps: 10
+model_run_id : 'Run_05_MS_4Layer_40Cells_230203'
+n_reps: 5
 
 
 train_model : True
