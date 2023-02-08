@@ -746,12 +746,12 @@ def wrapper_run_cluster_model(run_config_loc):
     for j in range(n_reps):
         rep = 'Rep_0'+str(j)
          
-        for group in np.sort(site_info.cluster_01.unique()):
+        for group in np.sort(site_info.cluster.unique()):
             print('-----------------------------------------------------------------------')
-            print('Training group ', group, ' of 7 | replicate #', str(j+1), 'of ', str(n_reps))
+            print('Training group ', group, ' of 5 | replicate #', str(j+1), 'of ', str(n_reps))
             print('-----------------------------------------------------------------------')
-            site_no_list = site_info[site_info['cluster_01'] == group].site_no
-            station_nm_list = site_info[site_info['cluster_01'] == group].station_nm
+            site_no_list = site_info[site_info['cluster'] == group].site_no
+            station_nm_list = site_info[site_info['cluster'] == group].station_nm
             run_id = os.path.join(model_run_id, rep,  'Cluster_0'+str(group))
             out_dir = os.path.join('03_model/out/multi_site', model_run_id, rep,  'Cluster_0'+str(group))
             if j == 0:
