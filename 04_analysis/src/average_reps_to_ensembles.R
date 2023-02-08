@@ -53,10 +53,10 @@ multi_site_run_summary <- data.frame()
 
 
 for (i in 1:length(sites)){
-  site_temp <- read_csv(file.path('~/Documents/GitHub/no3_ml_proj/03_model/out/multi_site/Run_00_Full_230131/Rep_00',sites[i],'ModelResults.csv'))[,c("Labeled","Train/Val/Test")]
+  site_temp <- read_csv(file.path('~/Documents/GitHub/no3_ml_proj/03_model/out/multi_site/Run_01_230201_Baseline/Rep_00',sites[i],'ModelResults.csv'))[,c("Labeled","Train/Val/Test")]
   for (j in 1:reps){
     rep <- str_pad(j-1, 2, pad = '0')
-    site_rep_temp <- read_csv(file.path('~/Documents/GitHub/no3_ml_proj/03_model/out/multi_site/Run_00_Full_230131',paste0('Rep_',rep),sites[i],'ModelResults.csv'))[,"Predicted"]
+    site_rep_temp <- read_csv(file.path('~/Documents/GitHub/no3_ml_proj/03_model/out/multi_site/Run_01_230201_Baseline',paste0('Rep_',rep),sites[i],'ModelResults.csv'))[,"Predicted"]
     site_temp <- cbind(site_temp,site_rep_temp) 
   }
   site_temp_summary <- tibble(Set = site_temp$`Train/Val/Test`, Labeled = site_temp$Labeled, Predicted_mean = rowMeans(site_temp[grepl( "Predicted" , names( site_temp ) )])) %>%
@@ -72,7 +72,7 @@ for (i in 1:length(sites)){
 multi_site_run_summary$lat <- basin_char$PHYS_LAT
 multi_site_run_summary$long <- basin_char$PHYS_LONG
 
-write_csv(multi_site_run_summary, '04_analysis/out/multi_site_ensemble_full_run_MS_summary_230131.csv')
+write_csv(multi_site_run_summary, '04_analysis/out/multi_site_ensemble_run_01_MS_summary_230201.csv')
 
 
 #clustered-site 01 (7 clusters) ensembles
