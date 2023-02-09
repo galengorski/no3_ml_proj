@@ -769,7 +769,7 @@ def wrapper_run_cluster_model(run_config_loc):
         rep = 'Rep_0'+str(j)
         #if you're training for out of sample experiments
         if run_config['train_oos_exp']:
-            oos_sites = pd.read_csv(os.path.join(run_config['model_run_id'],'global',rep,'oos_sites.csv'))
+            oos_sites = pd.read_csv(os.path.join('03_model/out/multi_site',run_config['model_run_id'],'global',rep,'oos_sites.csv'))
             #drop those sites from the site_info dataframe
             site_info.drop(oos_sites.index, inplace = True)
             site_no_list = site_info.site_no
@@ -824,7 +824,7 @@ def wrapper_run_hydroterrane_model(run_config_loc):
         rep = 'Rep_0'+str(j)
         #if you're training for out of sample experiments
         if run_config['train_oos_exp']:
-            oos_sites = pd.read_csv(os.path.join(run_config['model_run_id'],'global',rep,'oos_sites.csv'))
+            oos_sites = pd.read_csv(os.path.join('03_model/out/multi_site',run_config['model_run_id'],'global',rep,'oos_sites.csv'))
             #drop those sites from the site_info dataframe
             site_info.drop(oos_sites.index, inplace = True)
             site_no_list = site_info.site_no
