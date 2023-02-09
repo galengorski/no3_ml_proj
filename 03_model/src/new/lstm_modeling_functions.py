@@ -548,8 +548,8 @@ def wrapper_run_multi_site_model_c(run_config_loc):
             site_no_list = site_info.site_no
             station_nm_list = site_info[site_info.site_no.isin(site_no_list)].station_nm
 
-        
-        if j == 0:
+        #if it's the first rep or if we are training out of sample models
+        if j == 0 | run_config['train_oos_exp']:
             read_input_data_from_file = False
         else:
             read_input_data_from_file = True
@@ -789,7 +789,9 @@ def wrapper_run_cluster_model(run_config_loc):
             station_nm_list = site_info[site_info['cluster'] == group].station_nm
             run_id = os.path.join(model_run_id, rep,  'Cluster_0'+str(group))
             out_dir = os.path.join('03_model/out/multi_site', model_run_id, rep,  'Cluster_0'+str(group))
-            if j == 0:
+            
+            #if it's the first replicate or we are training out of sample models
+            if j == 0 | run_config['train_oos_exp']:
                 read_input_data_from_file = False
             else:
                 read_input_data_from_file = True
@@ -847,7 +849,9 @@ def wrapper_run_hydroterrane_model(run_config_loc):
             station_nm_list = site_info[site_info['hydro_terrane'] == group].station_nm
             run_id = os.path.join(model_run_id, rep,  'hydro_terrane'+str(group))
             out_dir = os.path.join('03_model/out/multi_site', model_run_id, rep,  'Terrane_'+str(group))
-            if j == 0:
+            
+            #if it's the first replicate or we are training out of sample models
+            if j == 0 | run_config['train_oos_exp']:
                 read_input_data_from_file = False
             else:
                 read_input_data_from_file = True
