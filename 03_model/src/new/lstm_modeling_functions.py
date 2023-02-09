@@ -510,9 +510,7 @@ def wrapper_run_multi_site_model_c(run_config_loc):
     
     model_run_id = run_config['model_run_id']
     
-    if run_config['train_oos_exp']:
-        model_run_id = os.path.join(run_config['model_run_id'], 'multi_site')
-    
+     
     netcdf_loc = run_config['netcdf_loc']
     config_loc = run_config['config_loc']
     read_input_data_from_file = run_config['read_input_data_from_file']
@@ -526,6 +524,9 @@ def wrapper_run_multi_site_model_c(run_config_loc):
     #oos_sites = run_config['oos_sites']
     multi_site = True
     
+    if run_config['train_oos_exp']:
+        model_run_id = os.path.join(run_config['model_run_id'], 'global')
+
     input_file_loc = os.path.join('03_model/out/multi_site',model_run_id)
     
     for j in range(n_reps):
@@ -540,8 +541,8 @@ def wrapper_run_multi_site_model_c(run_config_loc):
             #generate out of sample sites
             oos_sites = site_info.groupby('cluster', group_keys = False).apply(lambda x: x.sample(1))[['site_no','cluster','hydro_terrane']]
             #write the out of sample sites to file
-            os.makedirs(os.path.join(run_config['model_run_id'],rep), exist_ok=True)
-            oos_sites.to_csv(os.path.join(run_config['model_run_id'],rep,'oos_sites.csv'))
+            os.makedirs(out_dir, exist_ok=True)
+            oos_sites.to_csv(os.path.join(out_dir,'oos_sites.csv'))
             #drop those sites from the site_info dataframe
             site_info.drop(oos_sites.index, inplace = True)
             site_no_list = site_info.site_no
@@ -759,13 +760,16 @@ def wrapper_run_cluster_model(run_config_loc):
     #oos_sites = run_config['oos_sites']
     multi_site = True
     
+    if run_config['train_oos_exp']:
+        model_run_id = os.path.join(run_config['model_run_id'], 'cluster')
+    
     input_file_loc = os.path.join('03_model/out/multi_site',model_run_id)
     
     for j in range(n_reps):
         rep = 'Rep_0'+str(j)
         #if you're training for out of sample experiments
         if run_config['train_oos_exp']:
-            oos_sites = pd.read_csv(os.path.join(run_config['model_run_id'],rep,'oos_sites.csv'))
+            oos_sites = pd.read_csv(os.path.join(run_config['model_run_id'],'global',rep,'oos_sites.csv'))
             #drop those sites from the site_info dataframe
             site_info.drop(oos_sites.index, inplace = True)
             site_no_list = site_info.site_no
@@ -808,8 +812,11 @@ def wrapper_run_hydroterrane_model(run_config_loc):
     hp_tune_vals = run_config['hp_tune_vals']
     fine_tune = run_config['fine_tune']
     weights_dir = run_config['weights_dir']
-    #oos_sites = run_config['oos_sites']
     multi_site = True
+    
+    if run_config['train_oos_exp']:
+        model_run_id = os.path.join(run_config['model_run_id'], 'hydroterrane')
+
     
     input_file_loc = os.path.join('03_model/out/multi_site',model_run_id)
     
@@ -817,7 +824,7 @@ def wrapper_run_hydroterrane_model(run_config_loc):
         rep = 'Rep_0'+str(j)
         #if you're training for out of sample experiments
         if run_config['train_oos_exp']:
-            oos_sites = pd.read_csv(os.path.join(run_config['model_run_id'],rep,'oos_sites.csv'))
+            oos_sites = pd.read_csv(os.path.join(run_config['model_run_id'],'global',rep,'oos_sites.csv'))
             #drop those sites from the site_info dataframe
             site_info.drop(oos_sites.index, inplace = True)
             site_no_list = site_info.site_no
