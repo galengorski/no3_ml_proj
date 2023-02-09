@@ -539,7 +539,8 @@ def wrapper_run_multi_site_model_c(run_config_loc):
         if run_config['train_oos_exp']:
             #generate out of sample sites
             oos_sites = site_info.groupby('cluster', group_keys = False).apply(lambda x: x.sample(1))[['site_no','cluster','hydro_terrane']]
-            #write the out of sample sites to file 
+            #write the out of sample sites to file
+            os.makedirs(os.path.join(run_config['model_run_id'],rep), exist_ok=True)
             oos_sites.to_csv(os.path.join(run_config['model_run_id'],rep,'oos_sites.csv'))
             #drop those sites from the site_info dataframe
             site_info.drop(oos_sites.index, inplace = True)
