@@ -828,7 +828,7 @@ def wrapper_run_hydroterrane_model(run_config_loc):
     
     input_file_loc = os.path.join('03_model/out/multi_site',model_run_id)
     
-    for j in range(1,n_reps):
+    for j in range(n_reps):
         rep = 'Rep_0'+str(j)
         #if you're training for out of sample experiments
         if run_config['train_oos_exp']:
