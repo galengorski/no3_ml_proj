@@ -56,6 +56,8 @@ all_models <- rbind(ss, ms, cl, ht) %>%
 
 write_csv(all_models, file.path(gd, paste0('04_analysis/out/all_models_summary_',Sys.Date(),'.csv')))
 
+
+###########################################
 best_models <- all_models %>%
   group_by(site_no) %>%
   arrange(Testing_RMSE, .by_group = TRUE) %>%

@@ -538,6 +538,10 @@ def wrapper_run_multi_site_model_c(run_config_loc):
         
         #if you're training for out of sample experiments
         if run_config['train_oos_exp']:
+            #read site info back in fresh so you have all the sites
+            del site_info
+            site_info = pd.read_csv(run_config['site_info_loc'],  dtype = {'site_no':str})   
+
             #generate out of sample sites
             oos_sites = site_info.groupby('cluster', group_keys = False).apply(lambda x: x.sample(1))[['site_no','cluster','hydro_terrane']]
             #write the out of sample sites to file

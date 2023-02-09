@@ -9,38 +9,43 @@
 
 #===================================================================================#
 #####INSTALL PACKAGES#####
+# install.packages('cowplot')
+library(cowplot)
+# install.packages('forcats')
+library(forcats)
+# install.packages("ggpubr")
+library(ggpubr)
+# install.packages('ggspatial')
+library(ggspatial)
+# install.packages('ggtext')
+library(ggtext)
+# install.packages("gridExtra")
+library(gridExtra)
 # install.packages('Hmisc')
 library(Hmisc)
 # install.packages('maps')
 library(maps)
+# install.packages('ModelMetrics')
+library(ModelMetrics)
 # install.packages('RColorBrewer')
 library(RColorBrewer)
+# install.packages('reshape2')
+library(reshape2)
+# install.packages('rstatix')
+library(rstatix)
 # install.packages(sf)
 library(sf)
 # install.packages('tidyverse')
 library(tidyverse)
+# install.packages('tigris')
+library(tigris)
 # install.packages('tmap')
 library(tmap)
 # install.packages('tmaptools')
 library(tmaptools)
-# install.packages('tigris')
-library(tigris)
-# install.packages('ggspatial')
-library(ggspatial)
 # install.packages("viridis")
 library(viridis)
-# install.packages("gridExtra")
-library(gridExtra)
-# install.packages("ggpubr")
-library(ggpubr)
-# install.packages('ModelMetrics')
-library(ModelMetrics)
-# install.packages('reshape2')
-library(reshape2)
-# install.packages('forcats')
-library(forcats)
-# install.packages('cowplot')
-library(cowplot)
+
 
 #####
 #===================================================================================#
@@ -143,8 +148,9 @@ ggsave('04_analysis/figs/site_map_with_data_coverage.jpeg',height = 7, width = 1
 
 ##############---------single site model results---------##############
 #===================================================================================#
-ss_site_runs_sf <- read_csv('04_analysis/out/single_site_ensemble_run_summary.csv')
-site_runs_sf <- st_as_sf(ss_site_runs_sf, coords = c('long','lat'), crs = 4326)
+ss_site_runs_sf <- read_csv('04_analysis/out/all_models_summary_2023-02-09.csv') %>%
+  filter(run == 'Single-site')
+site_runs_sf <- st_as_sf(ss_site_runs_sf, coords = c('PHYS_LONG','PHYS_LAT'), crs = 4326)
 
 
 ss_perf_plot <- ggplot(data = states) +
@@ -190,25 +196,25 @@ colors <- viridis(15, option = 'C')
 ss_clean <- ss_site_runs_sf %>%
   filter(Testing_NSE > -0.5)
 
-ss_clean$color <- colourvalues::colour_values(ss_clean$Testing_NSE, palette = 'magma')
+# ss_clean$color <- colourvalues::colour_values(ss_clean$Testing_NSE, palette = 'magma')
+# 
+# hist(ss_clean$Testing_NSE)
+# 
+# hist(ss_clean$Testing_NSE, breaks = seq(-13,1,0.05), xlim = c(-0.5,1))#, col = ss_clean$color)
 
-hist(ss_clean$Testing_NSE)
-
-hist(ss_clean$Testing_NSE, breaks = seq(-13,1,0.05), xlim = c(-0.5,1))#, col = ss_clean$color)
-
-ss_clean %>%
+ss_site_runs_sf %>%
   ggplot(aes(x=Testing_NSE, color = Testing_NRMSE)) +
   geom_histogram(color = 'white')+
   theme_bw()+
   scale_fill_viridis()
 
 
-nrmse <- ss_clean %>%
+nrmse <- ss_site_runs_sf %>%
   arrange(Testing_NRMSE) %>%
-  mutate(index = seq(0,1,length.out = 45)) %>%
+  mutate(index = seq(0,1,length.out = 46)) %>%
   ggplot(aes(y = index, x = Testing_NRMSE)) +
   geom_vline(xintercept = median(ss_site_runs_sf$Testing_NRMSE), color = 'red', linetype = 'dashed')+
-  geom_line(size = 1.2)+
+  geom_line(linewidth = 1.2)+
   theme_bw()+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         axis.text = element_text(size = 14),
@@ -220,9 +226,9 @@ nrmse <- ss_clean %>%
   xlab('Normalized RMSE')+
   ggtitle('Normalized RMSE')
   
-rmse <- ss_clean %>%
+rmse <- ss_site_runs_sf %>%
   arrange(Testing_RMSE) %>%
-  mutate(index = seq(0,1,length.out = 45)) %>%
+  mutate(index = seq(0,1,length.out = 46)) %>%
   ggplot(aes(y = index, x = Testing_RMSE)) +
   geom_vline(xintercept = median(ss_site_runs_sf$Testing_RMSE), color = 'red', linetype = 'dashed')+
   geom_line(size = 1.2)+
@@ -237,9 +243,9 @@ rmse <- ss_clean %>%
   xlab('RMSE (mg/L)')+
   ggtitle('RMSE')
 
-nse <- ss_clean %>%
+nse <- ss_site_runs_sf %>%
   arrange(Testing_NSE) %>%
-  mutate(index = seq(0,1,length.out = 45)) %>%
+  mutate(index = seq(0,1,length.out = 46)) %>%
   ggplot(aes(y = index, x = Testing_NSE)) +
   geom_vline(xintercept = median(ss_site_runs_sf$Testing_NSE), color = 'red', linetype = 'dashed')+
   geom_line(size = 1.2)+
@@ -254,8 +260,26 @@ nse <- ss_clean %>%
   xlab('NSE')+
   ggtitle('NSE')
   
-plot_grid(nrmse, rmse, nse, ncol = 1)
-ggsave('04_analysis/figs/ss_metrics_cdf.jpg', height = 9, width = 4, dpi = 300)
+kge <- ss_site_runs_sf %>%
+  arrange(Testing_KGE) %>%
+  mutate(index = seq(0,1,length.out = 46)) %>%
+  ggplot(aes(y = index, x = Testing_KGE)) +
+  geom_vline(xintercept = median(ss_site_runs_sf$Testing_KGE), color = 'red', linetype = 'dashed')+
+  geom_line(size = 1.2)+
+  theme_bw()+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        axis.text = element_text(size = 14),
+        legend.text = element_text(size = 12),
+        legend.title = element_text(size = 12),
+        axis.title = element_text(size = 14),
+        title = element_text(size = 16))+
+  ylab('Fraction of sites')+
+  xlab('KGE')+
+  ggtitle('KGE')
+
+
+plot_grid(nrmse, rmse, nse, kge, ncol = 2)
+ggsave('04_analysis/figs/ss_metrics_cdf_new_kge.jpg', height = 6, width = 8, dpi = 300)
 
 
 ##############---------Good and bad time series---------##############
@@ -497,28 +521,28 @@ ggarrange(g,g_xplot,
 
 ##############---------Heatmap of attributes---------##############
 #===================================================================================#
-library(viridis)
-library(rstatix)
+
 
 #cleaned up names
-names_lookup <- read_csv('04_analysis/out/basin_char_names_lookup.csv')
+names_lookup <- read_csv('04_analysis/out/basin_char_names_lookup_formatted.csv')
 
 #read in the basin characteristics which include all static characteristics including those
 #that were not included in modeling and those that were calculated like cq slope
 basin_char_clean <- read_csv('04_analysis/out/basin_char_calc_clean.csv') %>%
-  dplyr::select(`...1`,names_lookup[!is.na(names_lookup$Used_Modeling),]$Names_Clean)
+  dplyr::select(site_no,names_lookup[!is.na(names_lookup$Used_Modeling),]$Names_Clean, CHEM_MEAN_NO3:CHEM_CQ_SLOPE)
 
+ss <- read_csv('04_analysis/out/all_models_summary_2023-02-09.csv') %>%
+  filter(run == 'Single-site')
 
-ss <- read_csv('04_analysis/out/single_site_ensemble_run_summary.csv')
 
 basin_char_num <- merge(basin_char_clean, ss[,c('site_no','Testing_RMSE','Testing_NRMSE','Testing_NSE','Testing_KGE','Testing_r')]) %>%
-                            dplyr::select(-c(site_no, ...1)) %>%
+                            dplyr::select(-site_no) %>%
   as_tibble()
 
 cor_test <- cor(basin_char_num)[,c('Testing_RMSE','Testing_NRMSE','Testing_NSE','Testing_KGE','Testing_r')]
 cor_test <- cor_test[order(row.names(cor_test)), ]
 #remove correlations between performance metrics
-cor_test <- cor_test[1:55,]
+cor_test <- cor_test[1:45,]
 #cor_test[abs(cor_test) < 0.25] <- NA
 
 cor_test_tib <- cor_test %>%
@@ -527,42 +551,59 @@ cor_test_tib <- cor_test %>%
   mutate(color = if_else(Testing_NRMSE>0,"neg","pos"))
 
 
-cols <- c(rep('#9a031e',3),rep('#127475',2),rep('#7161ef',2),
-          rep('#52b69a',2),rep('#fb8b24',4),rep('#184e77',1),
-          rep('#5f0f40',5))
+#cols <- c(rep('#9a031e',3),rep('#127475',2),rep('#7161ef',2),
+#          rep('#52b69a',2),rep('#fb8b24',4),rep('#184e77',1),
+#          rep('#5f0f40',5))
 
-cor_test_plot <- cor_test_tib %>%
+#read in the colors for categories same as global feature importance.R
+cat_col <- read_csv('04_analysis/out/category_color.csv')
+
+
+cor_test_plot_df <- cor_test_tib %>%
   arrange(desc(abs(Testing_NRMSE))) %>% 
   slice(1:20) %>% 
-  filter(var_names != "ANTHRO_TILES92") %>%
-  #filter(Testing_NRMSE_cor > 0.25) %>%
+  #filter(var_names != "ANTHRO_TILES92") %>%
+  filter(abs(Testing_NRMSE) > 0.20) %>%
   dplyr::select(var_names, Testing_NRMSE, color) %>%
+  mutate(Category = str_split_fixed(var_names, '_', 2)[,1]) %>%
+  left_join(cat_col, by = c('Category' = 'Category')) %>%
+  #arrange(Category)
   #add_row(Testing_NRMSE = c(0,0), var_names = c('FILL SPACE','FILL SPACE 2')) %>%
-  mutate(var_names = replace(var_names, var_names == 'ANTHRO_CANALDITCH', 'CANAL/DITCH')) %>%
-  mutate(var_names = replace(var_names, var_names == 'ANTHRO_MAJOR2013', 'MAJOR DAMS')) %>%
+  mutate(var_names = replace(var_names, var_names == 'ANTHRO_ARTIFICIAL', 'ARTIFICIAL REACH')) %>%
+  #mutate(var_names = replace(var_names, var_names == 'ANTHRO_CANALDITCH', 'CANAL/DITCH')) %>%
+  mutate(var_names = replace(var_names, var_names == 'ANTHRO_NDAMS2013', 'NUMBER OF DAMS')) %>%
   mutate(var_names = replace(var_names, var_names == 'ANTHRO_NID_STORAGE2013', 'MAXIMUM RESERVOIR STORAGE')) %>%
-  mutate(var_names = replace(var_names, var_names == 'ANTHRO_NORM_STORAGE2013', 'NORMAL RESERVOIR STORAGE')) %>%
-  mutate(var_names = replace(var_names, var_names == 'ANTHRO_TILE_DRAIN', 'TILE DRAINS')) %>%
+  mutate(var_names = replace(var_names, var_names == 'ANTHRO_NPDES_MAJ', 'NUMBER OF NPDES SITES')) %>%
+  #mutate(var_names = replace(var_names, var_names == 'ANTHRO_TILE_DRAIN', 'TILE DRAINS')) %>%
   mutate(var_names = replace(var_names, var_names == 'CHEM_FERT_N', 'FERTILIZER APPLIED')) %>%
+  mutate(var_names = replace(var_names, var_names == 'CLIMATE_RH', 'RELATIVE HUMIDITY')) %>%
   mutate(var_names = replace(var_names, var_names == 'GW_DTW', 'DEPTH TO GW')) %>%
-  mutate(var_names = replace(var_names, var_names == 'GW_NO3_DOM', 'GW NO3 DOM')) %>%
-  mutate(var_names = replace(var_names, var_names == 'GW_NO3_PUB', 'GW NO3 PUB')) %>%
-  mutate(var_names = replace(var_names, var_names == 'GW_TRANSM', 'TRANSMISSVITY')) %>%
-  mutate(var_names = replace(var_names, var_names == 'HYDRO_BFI', 'BASEFLOW INDEX')) %>%
-  mutate(var_names = replace(var_names, var_names == 'HYDRO_RECHG', 'RECHARGE')) %>%
+  #mutate(var_names = replace(var_names, var_names == 'GW_NO3_DOM', 'GW NO3 DOM')) %>%
+  #mutate(var_names = replace(var_names, var_names == 'GW_NO3_PUB', 'GW NO3 PUB')) %>%
+  #mutate(var_names = replace(var_names, var_names == 'GW_TRANSM', 'TRANSMISSVITY')) %>%
+  mutate(var_names = replace(var_names, var_names == 'GW_UNSAT_TT', 'VADOSE ZONE TRAVEL TIME')) %>%  
+  mutate(var_names = replace(var_names, var_names == 'HYDRO_CONTACT', 'CONTACT TIME')) %>%
+  #mutate(var_names = replace(var_names, var_names == 'HYDRO_RECHG', 'RECHARGE')) %>%
+  mutate(var_names = replace(var_names, var_names == 'HYDRO_MEAN_Q', 'MEAN DISCHARGE')) %>%
+  mutate(var_names = replace(var_names, var_names == 'HYDRO_SD_Q', 'SD DISCHARGE')) %>%
   mutate(var_names = replace(var_names, var_names == 'LULC_FOR', 'FOREST')) %>%
   mutate(var_names = replace(var_names, var_names == 'LULC_WTLND', 'WETLANDS')) %>%
-  mutate(var_names = replace(var_names, var_names == 'PHYS_BASIN_SLOPE', 'BASIN SLOPE')) %>%
+  mutate(var_names = replace(var_names, var_names == 'PHYS_BASIN_AREA', 'BASIN AREA')) %>%
+  mutate(var_names = replace(var_names, var_names == 'PHYS_STREAM_LENGTH', 'STREAM LENGTH')) %>%
   mutate(var_names = replace(var_names, var_names == 'PHYS_STREAM_SLOPE', 'STREAM SLOPE')) %>%
   mutate(var_names = replace(var_names, var_names == 'SOIL_HGA', 'HIGH INFILTRATION')) %>%
-  mutate(var_names = replace(var_names, var_names == 'SOIL_HGAD', 'HIGH INFILTRATION*')) %>%
-  mutate(var_names = replace(var_names, var_names == 'SOIL_HGBD', 'MEDIUM INFILTRATION*')) %>%
-  mutate(var_names = factor(var_names, levels = rev(c('MEDIUM INFILTRATION*','HIGH INFILTRATION*','HIGH INFILTRATION',
-                                                  'STREAM SLOPE','BASIN SLOPE','WETLANDS','FOREST',
-                                                  'RECHARGE','BASEFLOW INDEX',
-                                                  'TRANSMISSVITY','GW NO3 PUB','GW NO3 DOM',
-                                                  'DEPTH TO GW','FERTILIZER APPLIED','TILE DRAINS',
-                                                  'NORMAL RESERVOIR STORAGE','MAXIMUM RESERVOIR STORAGE','MAJOR DAMS','CANAL/DITCH')))) %>%
+  #mutate(var_names = replace(var_names, var_names == 'SOIL_HGAD', 'HIGH INFILTRATION*')) %>%
+  mutate(var_names = replace(var_names, var_names == 'SOIL_SRL55AG', 'SOIL RESTRICTIVE LAYER')) %>%
+  mutate(var_names = factor(var_names, levels = rev(c('SOIL RESTRICTIVE LAYER','HIGH INFILTRATION',
+                                                  'STREAM SLOPE','STREAM LENGTH','BASIN AREA',
+                                                  'WETLANDS','FOREST',
+                                                  'SD DISCHARGE','MEAN DISCHARGE','CONTACT TIME',
+                                                  'VADOSE ZONE TRAVEL TIME','DEPTH TO GW',
+                                                  'RELATIVE HUMIDITY',
+                                                  'FERTILIZER APPLIED',
+                                                  'NUMBER OF NPDES SITES','MAXIMUM RESERVOIR STORAGE',
+                                                  'NUMBER OF DAMS','ARTIFICIAL REACH'))))
+cor_test_plot <- cor_test_plot_df %>%
   ggplot(aes(x = var_names, y = Testing_NRMSE, fill = color))+
   geom_segment( aes(x=var_names, xend=var_names, y=0, yend=Testing_NRMSE)) +
   geom_point(size=5, shape=21, stroke=1)+ 
@@ -573,14 +614,14 @@ cor_test_plot <- cor_test_tib %>%
   theme_bw()+
   ylab('Pearson r')+
   xlab('')+
-  ylim(-0.35,0.35)+
+  ylim(-0.55,0.55)+
   theme(axis.text = element_text(size = 12),
         legend.position = 'none',
         panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         axis.title.x = element_text(size = 14),
         axis.text.x = element_text(size = 14))+
   geom_hline(yintercept = 0, color = 'black')+
-  theme(axis.text.y = element_text(colour = cols))
+  theme(axis.text.y = element_text(colour = rev(cor_test_plot_df %>% arrange(var_names) %>% pull(Color))))
 
 cor_test_plot
 ggsave('04_analysis/figs/single_site_basin_char_lollipop.jpeg', height = 6, width = 8, dpi = 750)

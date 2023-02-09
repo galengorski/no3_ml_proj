@@ -62,7 +62,7 @@ feat_imp_u <- read_csv('~/Documents/GitHub/no3_ml_proj/04_analysis/out/multi_sit
   pull(feat)
 
 #find the cleaned up names of the features with higher feature importances scores
-names_lookup_u <- read_csv('04_analysis/out/basin_char_names_lookup.csv') %>%
+names_lookup_u <- read_csv('04_analysis/out/basin_char_names_lookup_formatted.csv') %>%
   filter(Names %in% feat_imp_u | !is.na(Calculated)) %>%
   pull(Names_Clean) 
 
