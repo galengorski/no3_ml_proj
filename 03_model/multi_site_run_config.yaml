@@ -11,7 +11,7 @@ weights_dir: ''
 read_input_data_from_file: False
 input_file_loc : None
 
-model_run_id : 'Run_06_C_230208'
+model_run_id : 'Run_07_MS_OOS_230208'
 n_reps: 10
 
 
@@ -20,6 +20,9 @@ save_results_csv : True
 hp_tune : False
 hp_tune_vals : {}
 fine_tune : False
+
+#TRUE/FALSE for if the models should be trained for oos experiments
+train_oos_exp: True
 
 
 #%%

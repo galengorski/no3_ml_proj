@@ -509,6 +509,10 @@ def wrapper_run_multi_site_model_c(run_config_loc):
     
     
     model_run_id = run_config['model_run_id']
+    
+    if run_config['train_oos_exp']:
+        model_run_id = os.path.join(run_config['model_run_id'], 'multi_site')
+    
     netcdf_loc = run_config['netcdf_loc']
     config_loc = run_config['config_loc']
     read_input_data_from_file = run_config['read_input_data_from_file']
@@ -525,10 +529,23 @@ def wrapper_run_multi_site_model_c(run_config_loc):
     input_file_loc = os.path.join('03_model/out/multi_site',model_run_id)
     
     for j in range(n_reps):
+        
         rep = 'Rep_0'+str(j)
         run_id = os.path.join('03_model/out/multi_site',model_run_id,rep)
         out_dir = os.path.join('03_model/out/multi_site',model_run_id,rep)
         #weights_dir = os.path.join('03_model/out/multi_site/Run_07_OOS',rep)
+        
+        #if you're training for out of sample experiments
+        if run_config['train_oos_exp']:
+            #generate out of sample sites
+            oos_sites = site_info.groupby('cluster', group_keys = False).apply(lambda x: x.sample(1))[['site_no','cluster','hydro_terrane']]
+            #write the out of sample sites to file 
+            oos_sites.to_csv(os.path.join(run_config['model_run_id'],rep,'oos_sites.csv'))
+            #drop those sites from the site_info dataframe
+            site_info.drop(oos_sites.index, inplace = True)
+            site_no_list = site_info.site_no
+            station_nm_list = site_info[site_info.site_no.isin(site_no_list)].station_nm
+
         
         if j == 0:
             read_input_data_from_file = False
@@ -725,8 +742,8 @@ def wrapper_run_cluster_model(run_config_loc):
     with open(run_config_loc) as stream:
         run_config = yaml.safe_load(stream) 
         
-    site_info = pd.read_csv(run_config['site_info_loc'],  dtype = {'site_no':str})    
-    
+    site_info = pd.read_csv(run_config['site_info_loc'],  dtype = {'site_no':str})   
+        
     model_run_id = run_config['model_run_id']
     netcdf_loc = run_config['netcdf_loc']
     config_loc = run_config['config_loc']
@@ -745,6 +762,14 @@ def wrapper_run_cluster_model(run_config_loc):
     
     for j in range(n_reps):
         rep = 'Rep_0'+str(j)
+        #if you're training for out of sample experiments
+        if run_config['train_oos_exp']:
+            oos_sites = pd.read_csv(os.path.join(run_config['model_run_id'],rep,'oos_sites.csv'))
+            #drop those sites from the site_info dataframe
+            site_info.drop(oos_sites.index, inplace = True)
+            site_no_list = site_info.site_no
+            station_nm_list = site_info[site_info.site_no.isin(site_no_list)].station_nm
+
          
         for group in np.sort(site_info.cluster.unique()):
             print('-----------------------------------------------------------------------')
@@ -789,6 +814,13 @@ def wrapper_run_hydroterrane_model(run_config_loc):
     
     for j in range(1,n_reps):
         rep = 'Rep_0'+str(j)
+        #if you're training for out of sample experiments
+        if run_config['train_oos_exp']:
+            oos_sites = pd.read_csv(os.path.join(run_config['model_run_id'],rep,'oos_sites.csv'))
+            #drop those sites from the site_info dataframe
+            site_info.drop(oos_sites.index, inplace = True)
+            site_no_list = site_info.site_no
+            station_nm_list = site_info[site_info.site_no.isin(site_no_list)].station_nm
          
         for k, group in enumerate(np.sort(site_info.hydro_terrane.unique())):
             print('-----------------------------------------------------------------------')

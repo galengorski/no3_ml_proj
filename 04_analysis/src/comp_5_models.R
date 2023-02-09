@@ -15,28 +15,46 @@ library(tidyverse)
 #####
 #===================================================================================#
 
-cl <- read_csv('04_analysis/out/cluster_ensemble_full_run_08_C_summary.csv') %>%
-  mutate(hydro_terrane = NA, run = 'Clustered') %>%
-  rename('lat' = 'PHYS_LAT','long'= 'PHYS_LONG')
-ss <- read_csv('04_analysis/out/single_site_ensemble_run_summary.csv') %>%
-  mutate(hydro_terrane = NA, cluster = cl$cluster, run = 'Single-site')
-ms <- read_csv('04_analysis/out/multi_site_ensemble_full_run_MS_07_summary.csv') %>%
-  mutate(hydro_terrane = NA, cluster = cl$cluster, run = 'Multi-site')
-ht <- read_csv('04_analysis/out/hydro_terrane_ensemble_full_run_08_HT_summary.csv') %>%
-  mutate(hydro_terrane = cluster, cluster = cl$cluster, run = 'Hydro terrane') %>%
-  rename('lat' = 'PHYS_LAT','long'= 'PHYS_LONG')
-cl$hydro_terrane <- ht$hydro_terrane
-ss$hydro_terrane <- ht$hydro_terrane
-ms$hydro_terrane <- ht$hydro_terrane
+gh <- '~/Documents/GitHub/no3_ml_proj/'
+gd <- '~/galengorski@berkeley.edu - Google Drive/My Drive/ESDL Postdoc/02_Projects/no3_ml_proj/'
+ss_run_id <- 'Run_00_Full_230130'
+ms_run_id <- 'Run_01_230201_Baseline'
+cl_run_id <- 'Run_06_C_230208'
+ht_run_id <- 'Run_03_HT_230202'
+date <- '2023-02-09'
+
+basin_char <- read_csv(file.path(gh, '04_analysis/out/basin_char_w_clusters_hydroterranes_230208.csv'))
+
+ms <- read_csv(file.path(gd,paste0('04_analysis/out/',ms_run_id,'_ensemble_results_',date,'.csv'))) %>%
+  relocate(site_no:long, .before = Testing_RMSE) %>%
+  rename('PHYS_LAT' = 'lat','PHYS_LONG' = 'long') %>%
+  mutate(run = 'global', hydro_terrane = basin_char$hydro_terrane, cluster = basin_char$cluster) %>%
+  relocate(run:cluster, .before = PHYS_LAT)
+
+ss <- read_csv(file.path(gd,paste0('04_analysis/out/',ss_run_id,'_ensemble_results_',date,'.csv'))) %>%
+  relocate(site_no:long, .before = Testing_RMSE) %>%
+  rename('PHYS_LAT' = 'lat','PHYS_LONG' = 'long') %>%
+  mutate(run = 'Single-site', hydro_terrane = basin_char$hydro_terrane, cluster = basin_char$cluster) %>%
+  relocate(run:cluster, .before = PHYS_LAT)
+
+cl <- read_csv(file.path(gd,paste0('04_analysis/out/',cl_run_id,'_ensemble_results_',date,'.csv'))) %>%
+  relocate(PHYS_LAT:PHYS_LONG, .before = Testing_RMSE) %>%
+  dplyr::select(!cluster) %>%
+  mutate(run = 'Clustered', hydro_terrane = basin_char$hydro_terrane, cluster = basin_char$cluster) %>%
+  relocate(run:cluster, .before = PHYS_LAT)
+
+ht <- read_csv(file.path(gd,paste0('04_analysis/out/',ht_run_id,'_ensemble_results_',date,'.csv'))) %>%
+  relocate(PHYS_LAT:PHYS_LONG, .before = Testing_RMSE) %>%
+  dplyr::select(!cluster) %>%
+  mutate(run = 'Hydro terrane', hydro_terrane = basin_char$hydro_terrane, cluster = basin_char$cluster) %>%
+  relocate(run:cluster, .before = PHYS_LAT)
 
 
 all_models <- rbind(ss, ms, cl, ht) %>%
-  mutate(run = factor(run, levels = c("Single-site","Clustered","Hydro terrane","Multi-site")))
+  mutate(run = factor(run, levels = c("Single-site","Clustered","Hydro terrane","global")))
 
-basin_names <- read_csv('04_analysis/out/basin_char_w_clusters_10.csv') %>% dplyr::select(lat, long,station_nm)
 
-all_models <- left_join(all_models, basin_names, by = c('lat','long'))
-
+write_csv(all_models, file.path(gd, paste0('04_analysis/out/all_models_summary_',Sys.Date(),'.csv')))
 
 best_models <- all_models %>%
   group_by(site_no) %>%
@@ -44,7 +62,7 @@ best_models <- all_models %>%
   summarise(site_no = first(site_no), NSE = first(Testing_NSE), NRMSE = first(Testing_NRMSE),
             run = first(run), cluster = first(cluster), 
             hydro_terrane = first(hydro_terrane),
-            lat = first(lat), long = first(long))
+            lat = first(PHYS_LAT), long = first(PHYS_LONG))
 
 table(best_models$run)
 
@@ -54,16 +72,16 @@ all_models %>%
   ggplot(aes(x = run, y = Testing_RMSE, fill = run)) +
   geom_bar(stat = 'identity')+
   #ylim(0,1)+
-  facet_wrap(.~site_no)
+  facet_wrap(.~site_no, scales = 'free_y')
 
-all_models %>% group_by(run) %>% summarize(med_r = median(Testing_r))
+all_models %>% group_by(run) %>% summarize(med_r = median(Testing_NSE))
 
 
 #make a map of the best models for each site
-basin_char <- read_csv('04_analysis/out/basin_char_calc_clean.csv')
-basin_names <- read_csv('04_analysis/out/basin_char_w_clusters_10.csv') %>% dplyr::select(lat,long,station_nm)
+#basin_char <- read_csv('04_analysis/out/basin_char_calc_clean.csv')
+#basin_names <- read_csv('04_analysis/out/basin_char_w_clusters_10.csv') %>% dplyr::select(lat,long,station_nm)
 
-basin_char <- left_join(basin_char, basin_names, by = c('PHYS_LAT' = 'lat', 'PHYS_LONG' = 'long'))
+#basin_char <- left_join(basin_char, basin_names, by = c('PHYS_LAT' = 'lat', 'PHYS_LONG' = 'long'))
 
 
 best_models_char <- best_models %>%
