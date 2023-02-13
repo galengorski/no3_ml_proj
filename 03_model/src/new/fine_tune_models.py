@@ -6,6 +6,8 @@ Created on Thu Jan 26 14:47:54 2023
 @author: galengorski
 """
 #%%
+import sys
+sys.path.append("Documents/GitHub/no3_ml_proj/04_analysis/src")
 import lstm_modeling_functions as lmf
 import expected_gradients_functions as egf
 #%%
