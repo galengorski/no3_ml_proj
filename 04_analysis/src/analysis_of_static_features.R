@@ -153,7 +153,7 @@ conus <- states %>%
   filter(NAME %nin% c('Puerto Rico','Hawaii','Alaska','Guam','American Somoa','Commonwealth of the Northern Mariana Islands','United States Virigin Islands'))
 
 site_runs <- merge(site_info, runs, by.x = 'site_no', by.y = 'Site_number', all.x = FALSE, all.y = TRUE)
-site_runs_sf <- st_as_sf(site_runs, coords = c('long','lat'), crs = 4326)
+site_runs_sf <- st_as_sf(site_info, coords = c('long','lat'), crs = 4326)
 
 bbox <- st_bbox(site_runs_sf) %>%
   st_as_sfc()
@@ -163,11 +163,11 @@ m_site <- site_runs_sf %>%
 pal <- RColorBrewer::brewer.pal(7, "RdBu")
 tm_shape(conus, bbox = bbox*c(1,1.1)) +
   tm_borders() +
-  tm_shape(site_runs_sf)+
-  tm_symbols(col = 'NRMSE_validation', 
-             breaks = c(0,.2,.4,.6,.8,1,8), 
-             palette = pal, 
-             midpoint = 8)+
+  tm_shape(TOT_ARTIFICIAL)+
+  tm_symbols(col = 'NRMSE_validation'), 
+             #breaks = c(0,.2,.4,.6,.8,1,8), 
+             #palette = pal, 
+             #midpoint = 8)+
   tm_facets(by = 'run_short')
 
 
@@ -644,3 +644,33 @@ test <- hydro_data %>%
   filter(!is.na(nitrate)) %>%
   dim()
   tail()
+
+  
+  
+  
+  contact <- ggplot(data = states) +
+    geom_sf()+
+    geom_sf(data = site_runs_sf, aes(fill = HYDRO_CONTACT), shape = 21, size = 5, alpha = 0.8) +
+    scale_fill_gradient(low = '#ffffe5', high = '#cc4c02')+
+    coord_sf(xlim = c(-98, -68), ylim = c(35, 49), expand = FALSE) +
+    theme_bw()+
+    guides(fill=guide_colourbar(title="Subsurface contact time (days)"))+
+    ggspatial::annotation_scale(
+      location = "tr",
+      bar_cols = c("grey60", "white")
+    )+
+    ggspatial::annotation_north_arrow(
+      location = "tr", which_north = "true",
+      pad_x = unit(-0.1, "in"), pad_y = unit(1.8, "in"),
+      style = ggspatial::north_arrow_minimal(
+        text_size = 8, line_width = .8
+      )
+    )+
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+          axis.text = element_text(size = 14),
+          legend.text = element_text(size=12),
+          legend.title = element_text(size=12))
+  contact
+  ggsave('04_analysis/figs/Contact.jpeg',height = 7, width = 9, dpi = 500)
+  
+  

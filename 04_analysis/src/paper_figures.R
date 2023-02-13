@@ -557,7 +557,9 @@ cor_test_tib <- cor_test %>%
 
 #read in the colors for categories same as global feature importance.R
 cat_col <- read_csv('04_analysis/out/category_color.csv')
-
+#Do some adjusting to make it look better
+cat_col[cat_col$Category == 'GW',]$Color <- '#f0bf42'
+#cat_col
 
 cor_test_plot_df <- cor_test_tib %>%
   arrange(desc(abs(Testing_NRMSE))) %>% 
@@ -568,7 +570,7 @@ cor_test_plot_df <- cor_test_tib %>%
   mutate(Category = str_split_fixed(var_names, '_', 2)[,1]) %>%
   left_join(cat_col, by = c('Category' = 'Category')) %>%
   #arrange(Category)
-  #add_row(Testing_NRMSE = c(0,0), var_names = c('FILL SPACE','FILL SPACE 2')) %>%
+  add_row(Testing_NRMSE = c(0,0), var_names = c('FILL SPACE','FILL SPACE 2')) %>%
   mutate(var_names = replace(var_names, var_names == 'ANTHRO_ARTIFICIAL', 'ARTIFICIAL REACH')) %>%
   #mutate(var_names = replace(var_names, var_names == 'ANTHRO_CANALDITCH', 'CANAL/DITCH')) %>%
   mutate(var_names = replace(var_names, var_names == 'ANTHRO_NDAMS2013', 'NUMBER OF DAMS')) %>%
@@ -624,21 +626,23 @@ cor_test_plot <- cor_test_plot_df %>%
   theme(axis.text.y = element_text(colour = rev(cor_test_plot_df %>% arrange(var_names) %>% pull(Color))))
 
 cor_test_plot
-ggsave('04_analysis/figs/single_site_basin_char_lollipop.jpeg', height = 6, width = 8, dpi = 750)
+ggsave('04_analysis/figs/single_site_basin_char_lollipop_new.jpeg', height = 6, width = 8, dpi = 750)
 #dev.off()  
   
 
 ##############---------Map of clusters---------##############
 #===================================================================================#
-clusters_ht <- read_csv('04_analysis/out/basin_char_w_clusters_hydroterranes_221005.csv')
+clusters_ht <- read_csv('04_analysis/out/basin_char_w_clusters_hydroterranes_230208.csv')
 cluster_assig <- clusters_ht %>%
-  dplyr::select(site_no, PHYS_LONG, PHYS_LAT, cluster_01, hydro_terrane) %>%
-  mutate(Cluster = factor(cluster_01))
+  dplyr::select(site_no, PHYS_LONG, PHYS_LAT, cluster, hydro_terrane) %>%
+  mutate(Cluster = factor(cluster))
 
 states <- sf::st_as_sf(maps::map("state", plot = FALSE, fill = TRUE), crs = 4326)
 states_map <- maps::map("state", plot = FALSE, fill = FALSE)
 site_cluster <- st_as_sf(cluster_assig, coords = c('PHYS_LONG','PHYS_LAT'), crs = 4326)
 
+cols <- c('#ebac23','#b80058',
+                   '#00c6f8','#039103','#4c37c4','#008cf9','#d163e6','#b24502')
 
 cl_map <- ggplot(data = states) +
   geom_sf()+
@@ -663,64 +667,66 @@ cl_map <- ggplot(data = states) +
       text_size = 16, line_width = .8
     )
   )+
-  theme(axis.text = element_text(size = 16),
-        legend.text = element_text(size = 16),
-        legend.title = element_text(size = 16))
-cl_map
+  theme(axis.text = element_text(size = 16, color = 'black'),
+        legend.text = element_text(size = 16, color = 'black'),
+        legend.title = element_text(size = 16, color = 'black'))
+#cl_map
 #table(cluster_assig$cluster)
 
 
-####################################
-#PCA plot with biplot for cluster analysis
-#from: https://medium.com/@RaharditoDP/principal-component-analysis-with-biplot-analysis-in-r-ee39d17096a1
-library(factoextra)
-library(FactoMineR)
-library(scales)
-show_col(hue_pal()(7))
+#make biplot
+#find the cleaned up names of the features with higher feature importances scores
+names_lookup_u <- read_csv('04_analysis/out/basin_char_names_lookup_formatted.csv') %>%
+  filter(Names %in% feat_imp_u | !is.na(Calculated)) %>%
+  pull(Names_Clean) 
 
-basin_char_for_pca <- as.matrix(basin_char_clean %>%
-                                  dplyr::select(all_of(names_lookup)))
-rownames(basin_char_for_pca) <- basin_char_clean$site_no
+#scale and center the data
+basin_char_scaled_u <- as.matrix(clusters_ht %>%
+                                   dplyr::select(all_of(names_lookup_u)) %>%
+                                   scale())
+#add in site numbers as row names
+rownames(basin_char_scaled_u) <- clusters_ht$site_no
 
-res.pca <- PCA(basin_char_for_pca, graph = FALSE)
+#plot PCA to view how similar clusters are
+res.pca <- PCA(basin_char_scaled_u, graph = FALSE)
 
-#cols <- c('#F8766D','#C49A00','#53B400','#00C094','#00B6EB','#A58AFF','#FB61D7')
-#cols <- c('#ebac23','#b80058','#008cf9','#006e00','#d163e6','#b24502','#ff9287','#00c6f8')
-cols <- brewer.pal(7, 'Set1')
-library(paletteer) 
-cols <- paletteer_d("awtools::bpalette")[c(2,3,5,7,10,12,13,14)]
+fviz_screeplot(res.pca, addlabels = TRUE)
+
 
 cl_biplot <- fviz_pca_biplot(res.pca, 
-                             fill.ind = factor(clusters_ht$cluster_01), pointshape = 21, pointsize = 5, mean.point = FALSE, 
+                             fill.ind = factor(clusters_ht$cluster),
+                             pointshape = 21, pointsize = 4.0, mean.point = FALSE, 
                              label = 'var', legend.title = 'Cluster', repel = TRUE, 
-                             select.var = list(contrib = 12), ggtheme = theme_bw(), col.var = 'darkgray', xlab = 'PC1', ylab = 'PC2',
+                             select.var = list(contrib = 12), ggtheme = theme_bw(), col.var = 'lightgray', xlab = 'PC1 29.3%', ylab = 'PC2 16.8%',
                              title = 'Principal component analysis of clustered sites', alpha = 0.85)+
-  scale_fill_manual(values = c(cols))+
-  theme(legend.text = element_text(size = 16),
-        legend.title = element_text(size = 16),
-        axis.text = element_text(size = 16),
-        axis.title = element_text(size = 16),
+  scale_fill_manual(values = cols)+
+  theme(legend.text = element_text(size = 16, color = 'black'),
+        axis.text = element_text(size = 16, color = 'black'),
+        axis.title = element_text(size = 16, color = 'black'),
+        legend.title = element_blank(),
         panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-        legend.position = 'none',
-        title = element_text(size = 18))
+        title = element_text(size = 15, color = 'black'),
+        legend.position = 'none')
+#cl_biplot
+
 
 #lulc
 lulc_l <- clusters_ht %>%
-  group_by(cluster_01) %>%
+  group_by(cluster) %>%
   dplyr::select(starts_with('LULC')) %>%
   summarise(across(LULC_DEV:LULC_WTLND,median)) %>%
   pivot_longer(cols = LULC_DEV:LULC_WTLND) %>%
   mutate(Landuse = factor(name, levels = rev(c('LULC_AG','LULC_DEV','LULC_FOR','LULC_WTLND')))) %>%
-  mutate(Cluster = factor(cluster_01)) %>%
+  mutate(Cluster = factor(cluster)) %>%
   ggplot(aes(x = Cluster, y = value*100, fill = Landuse))+
   geom_bar(stat = 'identity')+
   theme_bw()+
-  theme(legend.text = element_text(size = 16),
-        axis.text = element_text(size = 16),
-        axis.title = element_text(size = 16),
+  theme(legend.text = element_text(size = 16, color = 'black'),
+        axis.text = element_text(size = 16, color = 'black'),
+        axis.title = element_text(size = 16, color = 'black'),
         panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         legend.title = element_blank(),
-        title = element_text(size = 18))+
+        title = element_text(size = 15, color = 'black'))+
   scale_fill_manual(values = rev(c('#f4a261','firebrick','#adc178','lightblue')), 
                     labels = rev(c('Agriculture','Developed','Forested','Wetlands')))+
   guides(fill = guide_legend(nrow = 2, override.aes = list(size=3)))+
@@ -732,7 +738,7 @@ lulc_leg <- get_legend(lulc_l)
 
 #soils
 soils_l <- clusters_ht %>%
-  group_by(cluster_01) %>%
+  group_by(cluster) %>%
   dplyr::select(starts_with('SOIL')) %>%
   mutate(High = SOIL_HGA+SOIL_HGAD, Moderate = SOIL_HGB+SOIL_HGBC+SOIL_HGBD,
          Slow = SOIL_HGC+SOIL_HGCD, `Very slow` = SOIL_HGD) %>%
@@ -740,7 +746,7 @@ soils_l <- clusters_ht %>%
   summarise(across(High:`Very slow`,median)) %>%
   pivot_longer(cols = High:`Very slow`) %>%
   mutate(Infiltration = factor(name, levels = rev(c('Very slow','Slow','Moderate','High')))) %>%
-  mutate(Cluster = factor(cluster_01)) %>%
+  mutate(Cluster = factor(cluster)) %>%
   ggplot(aes(x = Cluster, y = value, fill = Infiltration))+
   geom_bar(stat = 'identity')+
   scale_fill_manual(values = rev(c('#432818','#99582a','#bb9457','#ffe6a7')), 
@@ -748,12 +754,12 @@ soils_l <- clusters_ht %>%
   guides(fill = guide_legend(nrow = 2, override.aes = list(size=3)))+
   ggtitle('Soil infiltration capacity')+
   theme_bw()+
-  theme(legend.text = element_text(size = 16),
-        axis.text = element_text(size = 16),
-        axis.title = element_text(size = 16),
+  theme(legend.text = element_text(size = 16, color = 'black'),
+        axis.text = element_text(size = 16, color = 'black'),
+        axis.title = element_text(size = 16, color = 'black'),
         legend.title = element_blank(),
         panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-        title = element_text(size = 18))+
+        title = element_text(size = 15, color = 'black'))+
   ylab('Percentage of contributing area')
 
 soils <- soils_l + theme(legend.position = 'none')
@@ -761,85 +767,104 @@ soils_leg <- get_legend(soils_l)
 
 
 hydro_mean_q <- clusters_ht %>%
-  group_by(cluster_01) %>%
+  group_by(cluster) %>%
   summarise(across(PHYS_BASIN_AREA:CHEM_CQ_SLOPE,median)) %>%
-  mutate(Cluster = factor(cluster_01)) %>%
+  mutate(Cluster = factor(cluster)) %>%
   ggplot(aes(x = Cluster, y = log10(HYDRO_MEAN_Q), fill = Cluster))+
   geom_bar(stat = 'identity', color = 'black')+
   ggtitle('Mean discharge')+
   scale_fill_manual(values = c(cols))+
   theme_bw()+
-  theme(legend.text = element_text(size = 16),
-        legend.title = element_text(size = 16),
-        axis.text = element_text(size = 16),
-        axis.title = element_text(size = 16),
+  theme(legend.text = element_text(size = 16, color = 'black'),
+        legend.title = element_text(size = 16, color = 'black'),
+        axis.text = element_text(size = 16, color = 'black'),
+        axis.title = element_text(size = 16, color = 'black'),
         panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         legend.position = 'none',
-        title = element_text(size = 18))+
+        title = element_text(size = 15, color = 'black'))+
   ylab('log(Mean discharge) (cfs)')
 
-anthro_maj <- clusters_ht %>%
-  group_by(cluster_01) %>%
+tile_drains <- clusters_ht %>%
+  group_by(cluster) %>%
   summarise(across(PHYS_BASIN_AREA:CHEM_CQ_SLOPE,median)) %>%
-  mutate(Cluster = factor(cluster_01)) %>%
-  ggplot(aes(x = Cluster, y = ANTHRO_MAJOR2013, fill = Cluster))+
+  mutate(Cluster = factor(cluster)) %>%
+  ggplot(aes(x = Cluster, y = ANTHRO_TILE_DRAIN, fill = Cluster))+
   geom_bar(stat = 'identity', color = 'black')+
-  ggtitle('Major dams')+
+  ggtitle('Tile drains')+
   scale_fill_manual(values = c(cols))+
   theme_bw()+
-  theme(legend.text = element_text(size = 16),
-        legend.title = element_text(size = 16),
-        axis.text = element_text(size = 16),
-        axis.title = element_text(size = 16),
+  theme(legend.text = element_text(size = 16, color = 'black'),
+        legend.title = element_text(size = 16, color = 'black'),
+        axis.text = element_text(size = 16, color = 'black'),
+        axis.title = element_text(size = 16, color = 'black'),
         panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         legend.position = 'none',
-        title = element_text(size = 18))+
-  ylab('Number of major dams')
+        title = element_text(size = 15, color = 'black'))+
+  ylab('Fraction of area with tile drains')
 
 anthro_npdes <- clusters_ht %>%
-  group_by(cluster_01) %>%
+  group_by(cluster) %>%
   summarise(across(PHYS_BASIN_AREA:CHEM_CQ_SLOPE,median)) %>%
-  mutate(Cluster = factor(cluster_01)) %>%
+  mutate(Cluster = factor(cluster)) %>%
   ggplot(aes(x = Cluster, y = ANTHRO_NPDES_MAJ, fill = Cluster))+
   geom_bar(stat = 'identity', color = 'black')+
   ggtitle('Major NPDES sites')+
   scale_fill_manual(values = c(cols))+
   theme_bw()+
-  theme(legend.text = element_text(size = 16),
-        legend.title = element_text(size = 16),
-        axis.text = element_text(size = 16),
-        axis.title = element_text(size = 16),
+  theme(legend.text = element_text(size = 16, color = 'black'),
+        legend.title = element_text(size = 16, color = 'black'),
+        axis.text = element_text(size = 16, color = 'black'),
+        axis.title = element_text(size = 16, color = 'black'),
         panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         legend.position = 'none',
-        title = element_text(size = 18))+
+        title = element_text(size = 15, color = 'black'))+
   ylab('Number of NPDES sites')
 
 hydro_recharge <- clusters_ht %>%
-  group_by(cluster_01) %>%
+  group_by(cluster) %>%
   summarise(across(PHYS_BASIN_AREA:CHEM_CQ_SLOPE,median)) %>%
-  mutate(Cluster = factor(cluster_01)) %>%
+  mutate(Cluster = factor(cluster)) %>%
   ggplot(aes(x = Cluster, y = HYDRO_RECHG, fill = Cluster))+
   geom_bar(stat = 'identity', color = 'black')+
   ggtitle('Amount of recharge')+
   scale_fill_manual(values = c(cols))+
   theme_bw()+
-  theme(legend.text = element_text(size = 16),
-        legend.title = element_text(size = 16),
-        axis.text = element_text(size = 16),
-        axis.title = element_text(size = 16),
+  theme(legend.text = element_text(size = 16, color = 'black'),
+        legend.title = element_text(size = 16, color = 'black'),
+        axis.text = element_text(size = 16, color = 'black'),
+        axis.title = element_text(size = 16, color = 'black'),
         panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         legend.position = 'none',
-        title = element_text(size = 18))+
+        title = element_text(size = 15, color = 'black'))+
   ylab('Recharge')
 
-barplots <- plot_grid(hydro_mean_q, anthro_maj, anthro_npdes, hydro_recharge, lulc, soils, lulc_leg, soils_leg,
-          rel_heights = c(3,3,3,0.5), ncol = 2, labels = c('C','D','E','F','G','H','',''), 
-          label_size = 20, hjust = -2.3, align = 'v', axis = 'l')
-map_pca <- plot_grid(cl_map, cl_biplot, ncol = 1, labels = 'AUTO', align = 'l', label_size = 20)
+barplots <- plot_grid(hydro_mean_q, tile_drains, anthro_npdes, hydro_recharge, lulc, soils, lulc_leg, soils_leg,
+          rel_heights = c(3,3,3,0.5), ncol = 2, labels = c('c)','d)','e)','f)','g)','h)','',''), 
+          label_size = 18, hjust = -2.0, align = 'v', axis = 'l', label_fontface = 'plain')
+map_pca <- plot_grid(cl_map, cl_biplot, ncol = 1, labels = c('a)','b)'), align = 'l', label_size = 20, label_fontface = 'plain')
 #jpeg('04_analysis/figs/clusters_map_new_col.jpeg', height = 800, width = 1100)
 plot_grid(map_pca, barplots, ncol = 2)
-ggsave('04_analysis/figs/clusters_map_new_col_02.jpeg', height = 9, width = 16, dpi = 300)
+ggsave('05_Documents/Manuscript/Figures and Tables/fig/main_text/clusters_map_new_col_new_col.jpeg', height = 10, width = 15, dpi = 300)
 #dev.off()
+
+
+# clusters_ht %>%
+#   group_by(cluster) %>%
+#   summarise(across(PHYS_BASIN_AREA:CHEM_CQ_SLOPE,median)) %>%
+#   mutate(Cluster = factor(cluster)) %>%
+#   ggplot(aes(x = Cluster, y = ANTHRO_TILE_DRAIN, fill = Cluster))+
+#   geom_bar(stat = 'identity', color = 'black')+
+#   ggtitle('Amount of recharge')+
+#   scale_fill_manual(values = c(cols))+
+#   theme_bw()+
+#   theme(legend.text = element_text(size = 16, color = 'black'),
+#         legend.title = element_text(size = 16, color = 'black'),
+#         axis.text = element_text(size = 16, color = 'black'),
+#         axis.title = element_text(size = 16, color = 'black'),
+#         panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+#         legend.position = 'none',
+#         title = element_text(size = 15, color = 'black'))+
+#   ylab('Tile Drain')
 
 #layout <- as.matrix(rbind(c(1,1,1,1,3,3,4,4),c(1,1,1,1,3,3,4,4),
 #                          c(1,1,1,1,5,5,6,6),c(2,2,2,2,5,5,6,6),
@@ -848,8 +873,8 @@ ggsave('04_analysis/figs/clusters_map_new_col_02.jpeg', height = 9, width = 16, 
 #jpeg('04_analysis/figs/clusters_map.jpeg', height = 800, width = 1100)
 #gridExtra::grid.arrange(cl_map, cl_biplot, hydro_mean_q, anthro_maj, anthro_npdes, hydro_recharge, lulc, soils, layout_matrix = layout)
 #dev.off()
-cl_map
-ggsave('04_analysis/figs/cluster_map_only.jpeg', height = 6, width = 8, dpi = 300)
+#cl_map
+#ggsave('04_analysis/figs/cluster_map_only.jpeg', height = 6, width = 8, dpi = 300)
 
 
 #View and save cluster attributes
@@ -882,51 +907,41 @@ cluster_grouped <- clusters_ht %>%
 
 ##############---------Map of best model---------##############
 #===================================================================================#
-cl <- read_csv('04_analysis/out/cluster_ensemble_full_run_08_C_summary.csv') %>%
-  mutate(hydro_terrane = NA, run = 'Clustered') %>%
-  rename('lat' = 'PHYS_LAT','long'= 'PHYS_LONG')
-ss <- read_csv('04_analysis/out/single_site_ensemble_run_summary.csv') %>%
-  mutate(hydro_terrane = NA, cluster = cl$cluster, run = 'Single-site')
-ms <- read_csv('04_analysis/out/multi_site_ensemble_full_run_MS_07_summary.csv') %>%
-  mutate(hydro_terrane = NA, cluster = cl$cluster, run = 'Multi-site')
-ht <- read_csv('04_analysis/out/hydro_terrane_ensemble_full_run_08_HT_summary.csv') %>%
-  mutate(hydro_terrane = cluster, cluster = cl$cluster, run = 'Hydro terrane') %>%
-  rename('lat' = 'PHYS_LAT','long'= 'PHYS_LONG')
-cl$hydro_terrane <- ht$hydro_terrane
-ss$hydro_terrane <- ht$hydro_terrane
-ms$hydro_terrane <- ht$hydro_terrane
-
-
-all_models <- rbind(ss, ms, cl, ht) %>%
-  mutate(run = factor(run, levels = c("Single-site","Clustered","Hydro terrane","Multi-site")))
-
+####################################################################################################
+#CURRENT FIGURE 5
+all_models <- read_csv('04_analysis/out/all_models_summary_2023-02-09.csv')%>%
+  mutate(models = factor(run, 
+                         levels = c("Single-site","Clustered","Hydro terrane","global"),
+                         labels = c("Single-site","Clustered","Hydro terrane","Global")))
 
 best_models <- all_models %>%
   group_by(site_no) %>%
-  arrange(Testing_RMSE, .by_group = TRUE) %>%
-  summarise(site_no = first(site_no), RMSE = first(Testing_RMSE), run = first(run), cluster = first(cluster),
-            lat = first(lat), long = first(long))
+  arrange(Testing_NRMSE, .by_group = TRUE) %>%
+  summarise(site_no = first(site_no), RMSE = first(Testing_RMSE), models = first(models), cluster = first(cluster),
+            lat = first(PHYS_LAT), long = first(PHYS_LONG)) %>%
+  mutate(models = factor(models, 
+                         levels = c("Single-site","Clustered","Hydro terrane","Global"),
+                         labels = c("Single-site","Clustered","Hydro terrane","Global")))
   
 
 states <- sf::st_as_sf(maps::map("state", plot = FALSE, fill = TRUE), crs = 4326)
 states_map <- maps::map("state", plot = FALSE, fill = FALSE)
-site_runs_sf <- st_as_sf(best_models, coords = c('long','lat'), crs = 4326) #%>%
-  #filter(run %in% c('Single-site','Clustered','Hydro terrane'))
+site_runs_sf <- st_as_sf(best_models, coords = c('long','lat'), crs = 4326) 
 
 
 
 map <- ggplot(data = states) +
   geom_sf()+
-  geom_sf(data = site_runs_sf, aes(fill = run), shape = 21, size = 5, alpha = 0.8) +
+  geom_sf(data = site_runs_sf, aes(fill = models), shape = 21, size = 5, alpha = 0.8) +
   scale_fill_manual(values = c('#00bbf9','#ff595e','#ffca3a','#00f5d4'))+
   coord_sf(xlim = c(-98, -68), ylim = c(35, 49), expand = FALSE) +
   theme_bw()+
   guides(fill=guide_legend(title="Best performing model\nat each site"))+
   theme(legend.position = 'bottom',
-        legend.text = element_text(size = 12),
-        legend.title = element_text(size = 13),
-        axis.text = element_text(size = 16),
-        axis.title = element_text(size = 16),
+        legend.text = element_text(size = 12, color = 'black'),
+        axis.text = element_text(size = 14, color = 'black'),
+        axis.title = element_text(size = 14, color = 'black'),
+                                  legend.title = element_blank(),
         panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   ggspatial::annotation_scale(
     location = "tr",
@@ -937,13 +952,131 @@ map <- ggplot(data = states) +
     location = "tr", which_north = "true",
     pad_x = unit(-0.1, "in"), pad_y = unit(1.8, "in"),
     style = ggspatial::north_arrow_minimal(
-      text_size = 16, line_width = .8
+      text_size = 14, line_width = .8
     )
   )+
   guides(fill = guide_legend(nrow = 1, override.aes = list(size=9)))
 
 map
-ggsave('04_analysis/figs/best_model_map_4.jpg', height = 6, width = 8, dpi = 300)
+#ggsave('04_analysis/figs/best_model_map_new.jpg', height = 6, width = 8, dpi = 300)
+
+#NRMSE all models
+nrmse <- all_models %>%
+  group_by(models) %>%
+  arrange(Testing_NRMSE, .by_group = TRUE) %>%
+  mutate(index = seq(0,1,length.out = 46)) %>%
+  ggplot(aes(y = index, x = Testing_NRMSE, color = models)) +
+  geom_line(linewidth = 1.2)+
+  scale_color_manual(values = c('#00bbf9','#ff595e','#ffca3a','#00f5d4'))+
+  theme_bw()+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        axis.text = element_text(size = 12, color = 'black'),
+        legend.text = element_text(size=12, color = 'black'),
+        legend.title = element_text(size=12, color = 'black'),
+        axis.title = element_text(size = 14, color = 'black'),
+        title = element_text(size = 16), 
+        legend.position = 'none')+
+  ylab('Fraction of sites')+
+  xlab('Normalized RMSE')#+
+  #ggtitle('Normalized RMSE')
+
+#NSE all models
+nse <- all_models %>%
+  group_by(models) %>%
+  arrange(Testing_NSE, .by_group = TRUE) %>%
+  mutate(index = seq(0,1,length.out = 46)) %>%
+  ggplot(aes(y = index, x = Testing_NSE, color = models)) +
+  geom_line(linewidth = 1.2)+
+  scale_color_manual(values = c('#00bbf9','#ff595e','#ffca3a','#00f5d4'))+
+  theme_bw()+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        axis.text = element_text(size = 14, color = 'black'),
+        legend.text = element_text(size=12, color = 'black'),
+        legend.title = element_text(size=12, color = 'black'),
+        axis.title = element_text(size = 14, color = 'black'),
+        title = element_text(size = 16), 
+        legend.position = 'none')+
+  ylab('Fraction of sites')+
+  xlab('NSE')#+
+  #ggtitle('NSE')
+
+#NRMSE by NO3
+labels <- round(quantile(basin_char_clean$CHEM_MEAN_NO3, probs = seq(0,1,length.out = 6)) %>% as.numeric(), digits = 2)
+
+nrmse_by_n <- basin_char_clean %>%
+  mutate(quartile = factor(ntile(CHEM_MEAN_NO3, 5))) %>%
+  full_join(all_models, by = c('site_no' = 'site_no'), multiple = 'all') %>%
+  mutate(models = factor(models, 
+                         levels = c("Single-site","Clustered","Hydro terrane","Global"),
+                         labels = c("Single-site","Clustered","Hydro terrane","Global"))) %>%
+  ggplot(aes(x = quartile, y = Testing_NRMSE, fill = models))+
+  geom_boxplot()+
+  scale_fill_manual(values = c('#00bbf9','#ff595e','#ffca3a','#00f5d4'))+
+  theme_bw()+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        axis.text.y = element_text(size = 14, color = 'black'),
+        axis.text.x = element_text(size = 8, color = 'black'),
+        legend.text = element_text(size=12, color = 'black'),
+        axis.title = element_text(size = 14, color = 'black'),
+        title = element_text(size = 14), 
+        legend.position = 'none',#c(0.75, 0.85),
+        legend.title = element_blank())+
+  ylab('NRMSE')+
+  xlab('Mean nitrate concentration (mg/L)')+
+  #ggtitle('Model performance by average nitrate concentration')+
+  scale_x_discrete(labels = c('1' = paste0('< ',labels[2]),
+                              '2' = paste0(labels[2], ' - ', labels[3]),
+                              '3' = paste0(labels[3], ' - ', labels[4]),
+                              '4' = paste0(labels[4], ' - ', labels[5]),
+                              '5' = paste0('> ', labels[5])))#+
+  #guides(fill = guide_legend(nrow = 2, override.aes = list(size=9)))
+
+
+#NRMSE by MEAN Q
+labels <- round(quantile(basin_char_clean$HYDRO_MEAN_Q, probs = seq(0,1,length.out = 6)) %>% as.numeric(), digits = 0)
+
+nrmse_by_q <- basin_char_clean %>%
+  mutate(HYDRO_MEAN_Q_CFS = HYDRO_MEAN_Q*0.028316847) %>%
+  mutate(quartile = factor(ntile(HYDRO_MEAN_Q_CFS, 5))) %>%
+  full_join(all_models, by = c('site_no' = 'site_no'), multiple = 'all') %>%
+  mutate(models = factor(models, 
+                         levels = c("Single-site","Clustered","Hydro terrane","Global"),
+                         labels = c("Single-site","Clustered","Hydro terrane","Global"))) %>%
+  ggplot(aes(x = quartile, y = Testing_NRMSE, fill = models))+
+  geom_boxplot()+
+  scale_fill_manual(values = c('#00bbf9','#ff595e','#ffca3a','#00f5d4'))+
+  theme_bw()+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        axis.text.y = element_text(size = 14, color = 'black'),
+        axis.text.x = element_text(size = 8, color = 'black'),
+        legend.text = element_text(size=12, color = 'black'),
+        axis.title = element_text(size = 14, color = 'black'),
+        title = element_text(size = 14), 
+        legend.position = 'none',#c(0.25, 0.15),
+        legend.title = element_blank())+
+  ylab('NRMSE')+
+  xlab('Mean discharge (m3/sec)')+
+  #ggtitle('Model performance by average discharge')+
+  scale_x_discrete(labels = c('1' = paste0('< ',labels[2]),
+                              '2' = paste0(labels[2], ' - ', labels[3]),
+                              '3' = paste0(labels[3], ' - ', labels[4]),
+                              '4' = paste0(labels[4], ' - ', labels[5]),
+                              '5' = paste0('> ', labels[5])))#+
+  #guides(fill = guide_legend(nrow = 2, override.aes = list(size=9)))
+
+
+perf_plots <- plot_grid(nrmse, nse, nrmse_by_n, nrmse_by_q, ncol = 2, align = 'v', labels = c('b)','c)','d)','e)'), 
+                        hjust = -4.5, vjust = 1.9, label_fontface = 'plain', label_size = 16)
+map_perf_plots <- plot_grid(map, perf_plots, ncol = 1, rel_heights = c(1,1), labels = c('a)',''), 
+                            hjust = -6.5, vjust = 2, label_fontface = 'plain', label_size = 16, align = 'v')
+ggsave('05_documents/Manuscript/Figures and Tables/fig/main_text/all_models_map_metrics_by_n_q_protrait.jpg', height = 10, width = 8, dpi = 300)
+
+######################################################################################################################################################
+
+
+model_perf_by_attr 
+ggsave('05_Documents/Manuscript/Figures and Tables/fig/main_text/all_model_perf_NSE_MEAN_Q.jpeg', height = 6, width = 8, dpi = 300)
+
 
 dist <- all_models %>%
   mutate(models = factor(run, 
@@ -1080,6 +1213,15 @@ a <- cbind(
   #RMSE
   all_models %>%
     group_by(site_no) %>%
+    arrange(Testing_NRMSE, .by_group = TRUE) %>%
+    summarise(run = first(run)) %>%
+    pull(run) %>%
+    table() %>%
+    as_tibble() %>%
+    pull(n),
+  #RMSE
+  all_models %>%
+    group_by(site_no) %>%
     arrange(Testing_RMSE, .by_group = TRUE) %>%
     summarise(run = first(run)) %>%
     pull(run) %>%
@@ -1124,8 +1266,8 @@ a <- cbind(
     pull(n)
 )
 
-colnames(a) <- c('RMSE','NSE','PBIAS','r','KGE')
-rownames(a) <- c('Single-site','Clustered','Hydro terrane','Multi-site')  
+colnames(a) <- c('NRMSE','RMSE','NSE','PBIAS','r','KGE')
+rownames(a) <- c('Clustered','Global','Hydro terrane','Single-site')  
 a
 
 #performance metric by cluster or hydroterrane
@@ -1134,13 +1276,37 @@ all_models %>%
   summarise(med_NSE = median(Testing_NSE)) %>%
   pivot_wider(names_from = 'run', values_from = 'med_NSE')
 
+all_models %>%
+  group_by(run) %>%
+  summarise(med_NRMSE = median(Testing_NRMSE))
+  
+
 
 #best models
 best_models <- all_models %>%
+  filter(run == 'global'|run == 'Single-site') %>%
   group_by(site_no) %>%
-  arrange(desc(Testing_NSE), .by_group = TRUE) %>%
-  summarise(site_no = first(site_no), RMSE = first(Testing_RMSE), run = first(run), cluster = first(cluster),
-            lat = first(lat), long = first(long))
+  arrange(Testing_NRMSE, .by_group = TRUE) %>%
+  summarise(site_no = first(site_no), NRMSE = first(Testing_NRMSE), run = first(run), cluster = first(cluster),
+            lat = first(PHYS_LAT), long = first(PHYS_LONG)) %>%
+  filter(run == 'global')
+best_models
+
+
+states <- sf::st_as_sf(maps::map("state", plot = FALSE, fill = TRUE), crs = 4326)
+states_map <- maps::map("state", plot = FALSE, fill = FALSE)
+site_cluster <- st_as_sf(best_models, coords = c('long','lat'), crs = 4326)
+
+
+ggplot(data = states) +
+  geom_sf()+
+  #geom_sf(data = fc_rpj, aes(fill = Terrane), color = 'black', alpha = 0.15, show.legend = FALSE)+
+  geom_sf(data = site_cluster, shape = 21, size = 5, alpha = 0.8) +
+  coord_sf(xlim = c(-98, -68), ylim = c(35, 49), expand = FALSE) +
+  theme_bw()+
+  guides(fill = guide_legend(nrow = 1, override.aes = list(size=9)))+
+  scale_fill_manual(values = cols)
+  
 
 cl_sites <- best_models %>%
   filter(run == "Clustered") %>%
@@ -1214,5 +1380,179 @@ cl_map <- ggplot(data = states) +
 cl_map
 #ggsave('04_analysis/figs/map_all_sites.jpeg', height = 6, width = 8, dpi = 300)
 
+###################################################################################
+#FIGURE SHOWING CHEMOGRAPHS#
 
+#find a site where the global model did the best
+best_models <- all_models %>%
+  filter(run == 'global'|run == 'Single-site') %>%
+  group_by(site_no) %>%
+  arrange(Testing_NRMSE, .by_group = TRUE) %>%
+  summarise(site_no = first(site_no), NRMSE = first(Testing_NRMSE), run = first(run), cluster = first(cluster),
+            lat = first(PHYS_LAT), long = first(PHYS_LONG)) %>%
+  filter(run == 'global')
+best_models
+
+# # A tibble: 12 × 6
+# site_no  NRMSE run    cluster   lat  long
+# <chr>    <dbl> <chr>    <dbl> <dbl> <dbl>
+#   1 03353415  45.1 global       1  39.9 -86.4
+# 2 05412500  81.8 global       4  42.7 -91.3
+# 3 05418400  42.4 global       4  42.2 -90.7
+# 4 05451210  35.6 global       4  42.3 -93.2
+# 5 05455100  42.9 global       4  41.6 -91.6
+# 6 05464500  17.8 global       4  42.0 -91.7
+# 7 05465500  47.5 global       3  41.2 -91.2
+# 8 05481000  50.5 global       4  42.4 -93.8
+# 9 05482000  64.5 global       4  41.6 -93.6
+# 10 05484500  55.9 global       4  41.5 -93.9
+# 11 05579620  27.4 global       1  40.5 -88.9
+# 12 05579630  31.3 global       1  40.5 -88.9
+
+all_models %>%
+  select(site_no, run, Testing_NRMSE, Testing_NSE) %>%
+  filter(run == 'global' | run == 'Single-site') %>%
+  view()
+
+
+gh <- '~/Documents/GitHub/no3_ml_proj/'
+gd <- '~/galengorski@berkeley.edu - Google Drive/My Drive/ESDL Postdoc/02_Projects/no3_ml_proj/'
+
+basin_char <- read_csv(file.path(gh, '04_analysis/out/basin_char_w_clusters_hydroterranes_230208.csv'))
+sites <- basin_char$site_no
+reps <- 10
+
+ss_run_id <- 'Run_00_Full_230130'
+ms_run_id <- 'Run_01_230201_Baseline'
+cl_run_id <- 'Run_06_C_230208'
+ht_run_id <- 'Run_03_HT_230202'
+
+single_site_run_summary <- data.frame()
+
+all_models %>%
+  filter(run == 'Single-site') %>%
+  arrange(Testing_NRMSE) 
+
+#05554300 is a good one for single site
+site <- '05418400'
+site_g <- '05418400'
+
+site_nm <- basin_char %>%
+  filter(site_no == site) %>%
+  pull(station_nm)
+
+site_nm
+
+site_temp <- read_csv(file.path(paste0(gd,'03_model/out/single_site/',ss_run_id,'/Rep_00'),site,'ModelResults.csv'))[,c("DateTime","Labeled","Train/Val/Test")]
+  for (j in 1:reps){
+    rep <- str_pad(j-1, 2, pad = '0')
+    site_rep_temp <- read_csv(file.path(paste0(gd,'03_model/out/single_site/',ss_run_id),paste0('Rep_',rep),site,'ModelResults.csv'))[,"Predicted"]
+    site_temp <- cbind(site_temp,site_rep_temp) 
+  }
+site_temp$Predicted_mean <- rowMeans(site_temp[grepl( "Predicted" , names( site_temp ) )]) 
+
+site_temp_test <- site_temp[site_temp$`Train/Val/Test` == 'Testing',]
+
+colnames(site_temp_test)[4:13] <- paste0('Rep_',seq(1:10))
+
+site_temp_summary <- site_temp_test %>%
+  tibble() %>%
+  rename('Set' = `Train/Val/Test`) 
+  
+
+site_temp_summary %>%
+  relocate(Labeled, .after = Predicted_mean) %>%
+  select(-Set) %>%
+  pivot_longer(cols = Rep_1:Labeled) %>%
+  mutate(name = factor(name, 
+                         levels = c(paste0('Rep_',seq(1,10)), 'Labeled','Predicted_mean'),
+                         labels = c(paste0('Rep_',seq(1,10)), 'Observations','Predictions'))) %>%
+  ggplot(aes(x = DateTime, y = value, color = name))+
+  geom_line()+
+  scale_color_manual(values = c(rep('lightgray',10),'black','dodgerblue'))+
+  theme_bw()+
+  ylab('[NO3-N] (mg/L)')+
+  xlab('')+
+  ggtitle(paste0(site_nm, ' | Single-site'))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        axis.text.y = element_text(size = 14, color = 'black'),
+        axis.text.x = element_text(size = 14, color = 'black'),
+        legend.text = element_text(size=12, color = 'black'),
+        axis.title = element_text(size = 14, color = 'black'),
+        title = element_text(size = 14), 
+        legend.position = 'none',
+        legend.title = element_blank())
+
+
+#global model
+site_nm_g <- basin_char %>%
+  filter(site_no == site_g) %>%
+  pull(station_nm)
+
+site_nm_g
+
+
+site_temp <- read_csv(file.path(paste0(gh,'03_model/out/multi_site/',ms_run_id,'/Rep_00'),site_g,'ModelResults.csv'))[,c("DateTime","Labeled","Train/Val/Test")]
+for (j in 1:reps){
+  rep <- str_pad(j-1, 2, pad = '0')
+  site_rep_temp <- read_csv(file.path(paste0(gh,'03_model/out/multi_site/',ms_run_id),paste0('Rep_',rep),site_g,'ModelResults.csv'))[,"Predicted"]
+  site_temp <- cbind(site_temp,site_rep_temp) 
+}
+site_temp$Predicted_mean <- rowMeans(site_temp[grepl( "Predicted" , names( site_temp ) )]) 
+
+site_temp_test_ms <- site_temp[site_temp$`Train/Val/Test` == 'Testing',]
+
+colnames(site_temp_test_ms)[4:13] <- paste0('Rep_',seq(1:10))
+
+site_temp_summary_ms <- site_temp_test_ms %>%
+  tibble() %>%
+  rename('Set' = `Train/Val/Test`) 
+
+
+site_temp_summary_ms %>%
+  relocate(Labeled, .after = Predicted_mean) %>%
+  select(-Set) %>%
+  pivot_longer(cols = Rep_1:Labeled) %>%
+  mutate(name = factor(name, 
+                       levels = c(paste0('Rep_',seq(1,10)), 'Labeled','Predicted_mean'),
+                       labels = c(paste0('Rep_',seq(1,10)), 'Observations','Predictions'))) %>%
+  ggplot(aes(x = DateTime, y = value, color = name))+
+  geom_line()+
+  scale_color_manual(values = c(rep('lightgray',10),'black','#ff595e'))+
+  theme_bw()+
+  ylab('[NO3-N] (mg/L)')+
+  xlab('')+
+  ggtitle(paste0(site_nm_g,' | Global'))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        axis.text.y = element_text(size = 14, color = 'black'),
+        axis.text.x = element_text(size = 14, color = 'black'),
+        legend.text = element_text(size=12, color = 'black'),
+        axis.title = element_text(size = 14, color = 'black'),
+        title = element_text(size = 14), 
+        legend.position = 'none',
+        legend.title = element_blank())
+
+
+site_temp_summary %>%
+  mutate(run = "Single-site") %>%
+  select(DateTime, Labeled, Predicted_mean) %>%
+  rename('Predicted Single-site' = "Predicted_mean") %>%
+  full_join(site_temp_summary_ms[,c('DateTime','Predicted_mean')], by = c('DateTime' = 'DateTime')) %>%
+  rename('Predicted Global' = 'Predicted_mean', "Observed" = "Labeled") %>%
+  pivot_longer(cols = Observed:`Predicted Global`) %>%
+  ggplot(aes(x = DateTime, y = value, color = name))+
+  geom_line()+
+  scale_color_manual(values = c('black','#ff595e','#00bbf9'))+
+  theme_bw()+
+  ylab('[NO3-N] (mg/L)')+
+  xlab('')+
+  ggtitle(site_nm_g)+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        axis.text.y = element_text(size = 14, color = 'black'),
+        axis.text.x = element_text(size = 14, color = 'black'),
+        legend.text = element_text(size=12, color = 'black'),
+        axis.title = element_text(size = 14, color = 'black'),
+        title = element_text(size = 14), 
+        #legend.position = 'none',
+        legend.title = element_blank())
 
