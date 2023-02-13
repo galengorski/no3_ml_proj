@@ -10,11 +10,9 @@ import numpy as np
 import os
 import pandas as pd
 import pickle
-import shap
 import yaml
 import torch
-import torch.nn as nn
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import DataLoader
 
      
 
@@ -120,7 +118,7 @@ def initialize_model(config_loc, weights_loc):
 
     return feat_list, model
 
-def select_site(site, batch_size = 512, device = 'cpu', shuffle = True):
+def select_site(site, run_id, batch_size = 512, device = 'cpu', shuffle = True):
     '''
     Parameters
     ----------
@@ -145,7 +143,7 @@ def select_site(site, batch_size = 512, device = 'cpu', shuffle = True):
         loaded data for all sites (used to generate baseline values)
 
     '''
-    with open('03_model/out/multi_site/Run_06_MS/Rep_00/prepped_data', 'rb') as input_data:
+    with open(os.path.join('03_model/out/multi_site',run_id,'Rep_00/prepped_data'), 'rb') as input_data:
             concat_model_data = pickle.load(input_data)
 
     site_X = concat_model_data['train_val_x'][concat_model_data['train_val_indices'][site]["From"]:concat_model_data['train_val_indices'][site]["To"]]
@@ -159,19 +157,21 @@ def select_site(site, batch_size = 512, device = 'cpu', shuffle = True):
     train_val_dataset.device = device
     train_loader_site = DataLoader(dataset = train_val_dataset, batch_size = batch_size, shuffle=shuffle,drop_last=False, pin_memory=True)
     
-    #prepare the full dataset
+    #prepare the full dataset, all sites (needed for baseline)
     train_val_dataset_full = lmf.CatchmentDataset(concat_model_data['train_val_x'], concat_model_data['train_val_y'])
     train_val_dataset_full.device = device
     train_loader_site_full = DataLoader(dataset = train_val_dataset_full, batch_size = batch_size, shuffle=shuffle,drop_last=False, pin_memory=True)
     
     return concat_model_data, site_dates, train_loader_site, train_loader_site_full
 
-def calc_expected_gradients(config_loc, weights_loc, site):
+def calc_expected_gradients(model_config_loc, run_id, weights_loc, site):
     '''
     Parameters
     ----------
-    config_loc : str
+    model_config_loc : str
         file path; location of the model config yaml file
+    run_id: str
+        model run directory
     weights_loc : str
         file paht; location of the trained weights file
     site : str
@@ -186,8 +186,8 @@ def calc_expected_gradients(config_loc, weights_loc, site):
 
     '''
     
-    feat_list, model = initialize_model(config_loc, weights_loc)
-    concat_model_data, site_dates, site_data, full_data = select_site(site)
+    feat_list, model = initialize_model(model_config_loc, weights_loc)
+    concat_model_data, site_dates, site_data, full_data = select_site(site, run_id)
     
     #site_data.dataset.X has dimension [n_obs, seq_len, n_features]
     x_data_in = site_data.dataset.X
@@ -196,11 +196,11 @@ def calc_expected_gradients(config_loc, weights_loc, site):
     print("Calculating expected gradients for "+site)
     egs = expected_gradients_lstm(x_data_in, x_set, model, n_samples, temporal_focus=None)
         
-    inputs_np = x_data_in.detach().numpy()
-    inputs_df = pd.DataFrame(inputs_np[:,0,:], columns = feat_list[1:], index = site_dates)
+    #inputs_np = x_data_in.detach().numpy()
+    #inputs_df = pd.DataFrame(inputs_np[:,0,:], columns = feat_list[1:], index = site_dates)
     
-    eg_df = pd.DataFrame(egs[:,0,:], columns = feat_list[1:], index = site_dates)
-    return inputs_df, eg_df
+    #eg_df = pd.DataFrame(egs[:,0,:], columns = feat_list[1:], index = site_dates)
+    return egs
 
 def fetch_predictions(site, reps):
     ss_rep_all = pd.read_csv('03_model/out/single_site/Run_00_Full/Rep_00/'+site+'/ModelResults.csv', parse_dates = True, index_col = 'DateTime')
@@ -223,3 +223,26 @@ def fetch_predictions(site, reps):
     
     return model_preds_mean_ss, model_preds_mean_ms
 
+def calc_expected_gradients_all_sites(run_config_loc):
+    with open(run_config_loc) as stream:
+        run_config = yaml.safe_load(stream)  
+
+    model_config_loc = run_config['config_loc']
+    run_id = run_config['model_run_id']    
+    site_info = pd.read_csv(run_config['site_info_loc'],  dtype = {'site_no':str}) 
+    n_reps = run_config['n_reps']
+    
+    for site in site_info.site_no.unique():
+        egs_all_reps_list = list()
+        for j in range(n_reps):
+            rep = 'Rep_0'+str(j)
+            weights_loc = os.path.join('03_model/out/multi_site',run_id,rep,'model_weights.pt')
+            egs = calc_expected_gradients(model_config_loc, run_id, weights_loc, site)
+            
+            egs_all_reps_list.append(egs_np_rep)
+    
+        #stack the resulting list into a numpy array
+        egs_all_reps_np = np.stack(egs_all_reps_list, axis = 0)
+        #take the mean of all reps
+        egs_np = np.mean(egs_all_reps_np, axis = 0)
+        eg_df.to_csv('04_analysis/out/EG_sites/multi_site_07_'+site+'.csv')
