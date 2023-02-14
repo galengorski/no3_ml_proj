@@ -268,4 +268,4 @@ def calc_expected_gradients_all_sites(run_config_loc):
     
     for site in site_info.site_no.unique():
         eg_df = calc_expected_gradients(model_config_loc, run_id, site, n_reps)
-        eg_df.to_csv('04_analysis/out/EG_sites/multi_site_01_'+site+'.csv')
+        eg_df.to_csv('04_analysis/out/EG_sites/multi_site_01_single_rep'+site+'.csv')
