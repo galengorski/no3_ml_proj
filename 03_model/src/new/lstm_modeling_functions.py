@@ -122,10 +122,15 @@ def to_numpy(tensor):
         tensor = tensor.cpu()
     return tensor.detach().numpy()
 
-def train_lstm(config_loc, concat_model_data, out_dir, hp_tune, hp_tune_vals, fine_tune = False, weights_dir = None):
+def train_lstm(run_config_loc, concat_model_data, out_dir, hp_tune, hp_tune_vals, fine_tune, weights_dir):
+    
+    with open(run_config_loc) as stream:
+        run_config = yaml.safe_load(stream)
+            
+    config_loc = run_config['config_loc']
     
     with open(config_loc) as stream:
-      config = yaml.safe_load(stream)
+            config = yaml.safe_load(stream)
     
     if hp_tune:
         learning_rate = hp_tune_vals['learning_rate']
@@ -151,6 +156,8 @@ def train_lstm(config_loc, concat_model_data, out_dir, hp_tune, hp_tune_vals, fi
     weight_decay = config['weight_decay']
     hidden_size = config['hidden_size']
     shuffle = config['shuffle']
+    fine_tune = run_config['fine_tune']
+    #weights_dir = run_config['weights_dir']
 
     # set up data splits
     # if config['predict_period'] == 'full':
@@ -170,7 +177,7 @@ def train_lstm(config_loc, concat_model_data, out_dir, hp_tune, hp_tune_vals, fi
     #train the model using the new data, and save the new weights in the out_dir
     if fine_tune:
         model.load_state_dict(torch.load(os.path.join(weights_dir,"model_weights.pt")))
-        print("Loading pre-trained weights")
+        print("Loading pre-trained weights for fine tuning")
     else:
         print("Not loading pre-trained weights")
         
@@ -219,11 +226,16 @@ def train_lstm(config_loc, concat_model_data, out_dir, hp_tune, hp_tune_vals, fi
     
     #return model, running_loss, valid_loss
 
-def make_predictions_lstm(config_loc, out_dir, concat_model_data, hp_tune, hp_tune_vals, train_model, weights_dir):
+def make_predictions_lstm(run_config_loc, out_dir, concat_model_data, hp_tune, hp_tune_vals, train_model, weights_dir):
+    
+    with open(run_config_loc) as stream:
+        run_config = yaml.safe_load(stream)
+            
+    config_loc = run_config['config_loc']
     
     with open(config_loc) as stream:
-      config = yaml.safe_load(stream)
-      
+            config = yaml.safe_load(stream)      
+            
     if hp_tune:
         learning_rate = hp_tune_vals['learning_rate']
         seq_len = hp_tune_vals['seq_len']
@@ -245,11 +257,13 @@ def make_predictions_lstm(config_loc, out_dir, concat_model_data, hp_tune, hp_tu
     hidden_size = config['hidden_size']
     #shuffle = config['shuffle']
     predict_period = config['predict_period']
+    fine_tune = run_config['fine_tune']
+    weights_dir = run_config['weights_dir']
     
     model = LSTM_layer(num_features, hidden_size, seq_len, num_layers, dropout, learning_rate, weight_decay)
     model = model.to(device)
     
-    if train_model:
+    if train_model or fine_tune:
         model.load_state_dict(torch.load(os.path.join(out_dir,"model_weights.pt")))
     else:
         model.load_state_dict(torch.load(os.path.join(weights_dir,"model_weights.pt")))
@@ -427,13 +441,18 @@ def unnormalize(pred, mean, std):
     return mean + std * pred
 
 
-def run_multi_site_model_c(netcdf_loc, config_loc, site_no_list, station_nm_list, read_input_data_from_file, input_file_loc, out_dir, run_id, train_model, multi_site, fine_tune, weights_dir, hp_tune, hp_tune_vals, save_results_csv):
+def run_multi_site_model_c(netcdf_loc, run_config_loc, site_no_list, station_nm_list, read_input_data_from_file, input_file_loc, out_dir, run_id, train_model, multi_site, fine_tune, weights_dir, hp_tune, hp_tune_vals, save_results_csv):
     
     os.makedirs(out_dir, exist_ok = True)
     
-    with open(config_loc) as stream:
-        config = yaml.safe_load(stream)       
+    with open(run_config_loc) as stream:
+            run_config = yaml.safe_load(stream)
+            
+    config_loc = run_config['config_loc']
     
+    with open(config_loc) as stream:
+            config = yaml.safe_load(stream)
+            
     if read_input_data_from_file:
         with open(os.path.join(input_file_loc,'prepped_data'), 'rb') as input_data:
             concat_model_data = pickle.load(input_data)
@@ -445,9 +464,9 @@ def run_multi_site_model_c(netcdf_loc, config_loc, site_no_list, station_nm_list
         concat_model_data, n_means_stds = ppf.full_prepare_multi_site_data(netcdf_loc, config_loc, site_no_list, station_nm_list, out_dir, fine_tune, weights_dir)
     
     if train_model:  
-        train_lstm(config_loc, concat_model_data, out_dir, hp_tune, hp_tune_vals, fine_tune, weights_dir)
+        train_lstm(run_config_loc, concat_model_data, out_dir, hp_tune, hp_tune_vals, fine_tune, weights_dir)
     
-    lstm_predictions = make_predictions_lstm(config_loc, out_dir, concat_model_data, hp_tune, hp_tune_vals, train_model, weights_dir)
+    lstm_predictions = make_predictions_lstm(run_config_loc, out_dir, concat_model_data, hp_tune, hp_tune_vals, train_model, weights_dir)
 
     preds_unnorm = unnormalize_lstm_prediction(config_loc, lstm_predictions, n_means_stds)
     
@@ -534,7 +553,7 @@ def wrapper_run_multi_site_model_c(run_config_loc):
         rep = 'Rep_0'+str(j)
         run_id = os.path.join('03_model/out/multi_site',model_run_id,rep)
         out_dir = os.path.join('03_model/out/multi_site',model_run_id,rep)
-        #weights_dir = os.path.join('03_model/out/multi_site/Run_07_OOS',rep)
+        weights_dir = os.path.join('03_model/out/multi_site',model_run_id,rep)
         
         #if you're training for out of sample experiments
         if run_config['train_oos_exp']:
@@ -560,12 +579,20 @@ def wrapper_run_multi_site_model_c(run_config_loc):
             read_input_data_from_file = True
             input_file_loc = os.path.join('03_model/out/multi_site',model_run_id,'Rep_00')
         
-        run_multi_site_model_c(netcdf_loc, config_loc, site_no_list, station_nm_list, 
+        run_multi_site_model_c(netcdf_loc, run_config_loc, site_no_list, station_nm_list, 
                    read_input_data_from_file, input_file_loc, out_dir, run_id,
                    train_model, multi_site, fine_tune, weights_dir, hp_tune, hp_tune_vals, save_results_csv)
 
-def run_single_site_model_c(netcdf_loc, config_loc, site_no, station_nm, read_input_data_from_file, input_file_loc, out_dir, run_id, train_model, multi_site, hp_tune, hp_tune_vals, weights_dir, save_results_csv):
+def run_single_site_model_c(netcdf_loc, run_config_loc, site_no, station_nm, read_input_data_from_file, input_file_loc, out_dir, run_id, train_model, multi_site, hp_tune, hp_tune_vals, weights_dir, save_results_csv):
+#    out_dir = os.path.join('03_model/out/multi_site/',model_run_id)
+    
     os.makedirs(out_dir, exist_ok = True)
+    
+    with open(run_config_loc) as stream:
+        run_config = yaml.safe_load(stream)
+            
+    config_loc = run_config['config_loc']
+    fine_tune = run_config['fine_tune']
     
     if read_input_data_from_file:
         with open(os.path.join(input_file_loc,'prepped_data'), 'rb') as input_data:
@@ -576,19 +603,115 @@ def run_single_site_model_c(netcdf_loc, config_loc, site_no, station_nm, read_in
             print('Writing results to '+ out_dir)
     else:         
         #prepare the data
-        site_data, n_means_stds = ppf.full_prepare_single_site_data(netcdf_loc, config_loc, site_no, station_nm, out_dir, hp_tune, hp_tune_vals)
+        site_data, n_means_stds = ppf.full_prepare_single_site_data(netcdf_loc, run_config_loc, site_no, station_nm, out_dir, hp_tune, hp_tune_vals, weights_dir)
 
     if train_model:  
-        train_lstm(config_loc, site_data, out_dir, hp_tune, hp_tune_vals)
+        train_lstm(run_config_loc, site_data, out_dir, hp_tune, hp_tune_vals, fine_tune, weights_dir)
     
-    lstm_predictions = make_predictions_lstm(config_loc, out_dir, site_data, hp_tune, hp_tune_vals, train_model, weights_dir)    
-    
-    #config_loc, out_dir, site_data, hp_tune, hp_tune_vals, train_model, weights_dir
-    
+    lstm_predictions = make_predictions_lstm(run_config_loc, out_dir, site_data, hp_tune, hp_tune_vals, train_model, weights_dir)    
+        
     preds_unnorm = unnormalize_lstm_prediction(config_loc, lstm_predictions, n_means_stds)
         
     site_dict = save_results(config_loc, preds_unnorm, site_data, out_dir, station_nm, site_no, hp_tune, hp_tune_vals, save_results_csv, run_id, multi_site)
     return site_dict
+
+def wrapper_fine_tune_multi_site_models(run_config_loc):
+    with open(run_config_loc) as stream:
+        run_config = yaml.safe_load(stream) 
+        
+    site_info = pd.read_csv(run_config['site_info_loc'],  dtype = {'site_no':str})
+    site_no_list = site_info.site_no
+    station_nm_list = site_info[site_info.site_no.isin(site_no_list)].station_nm
+    
+    
+    model_run_id = run_config['model_run_id']
+    model_run_dir = os.path.join('03_model/out/multi_site', model_run_id)
+    netcdf_loc = run_config['netcdf_loc']
+    config_loc = run_config['config_loc']
+    read_input_data_from_file = run_config['read_input_data_from_file']
+    n_reps = run_config['n_reps']
+    train_model = run_config['train_model']
+    save_results_csv = run_config['save_results_csv']
+    hp_tune = run_config['hp_tune']
+    hp_tune_vals = run_config['hp_tune_vals']
+    weights_top_dir = run_config['weights_dir']
+    #fine_tune = run_config['fine_tune']
+    #oos_sites = run_config['oos_sites']
+    multi_site = False
+
+    for j in range(n_reps):
+        
+        rep = ('Rep_0'+str(j))
+        oos_sites = pd.read_csv(os.path.join(weights_top_dir,'global',rep,'oos_sites.csv'),  dtype = {'site_no':str})
+        
+        for i, oos_site in enumerate(oos_sites.site_no):
+            site = oos_site
+            cl = '0'+str(oos_sites['cluster'].iloc[i])
+            ht = oos_sites['hydro_terrane'].iloc[i]
+            
+            #for global model
+            weights_dir = os.path.join(weights_top_dir, 'global',rep)
+            out_dir = os.path.join(model_run_dir,'global',rep, site)
+            station_nm_list = list(site_info[site_info.site_no == site].station_nm)
+            run_id = os.path.join(model_run_id,'global', rep, site)
+
+            read_input_data_from_file = False
+            input_file_loc = os.path.join(model_run_id,'global', rep, site)
+            
+            print('-----------------------------------------------------------------------')
+            print('Global Model')
+            print('Training site: ', site, ' # ', str(i+1), ' of 5 out sample sites')
+            print('Reading model weights from : ', weights_dir)
+            print('Writing results to: ', out_dir)
+            print('-----------------------------------------------------------------------')
+        
+            site_perf = run_single_site_model_c(netcdf_loc, run_config_loc, site, station_nm_list, 
+                                   read_input_data_from_file, input_file_loc, out_dir, run_id,
+                                   train_model, multi_site, hp_tune, hp_tune_vals, weights_dir, save_results_csv)
+            
+            
+            #for clustered model
+            del site_perf
+            weights_dir = os.path.join(weights_top_dir, 'cluster',rep,'Cluster_'+cl)
+            out_dir = os.path.join(model_run_dir,'cluster',rep, site)
+            run_id = os.path.join(model_run_id,'cluster', rep, site)
+
+            read_input_data_from_file = True
+            input_file_loc = os.path.join(model_run_dir,'global', rep, site)
+            
+            print('-----------------------------------------------------------------------')
+            print('Cluster Model')
+            print('Training site: ', site, ' # ', str(i+1), ' of 5 out sample sites')
+            #print('Reading model weights from : ', weights_dir)
+            #print('Writing results to: ', out_dir)
+            print('-----------------------------------------------------------------------')
+        
+            site_perf = run_single_site_model_c(netcdf_loc, run_config_loc, site, station_nm_list, 
+                                   read_input_data_from_file, input_file_loc, out_dir, run_id,
+                                   train_model, multi_site, hp_tune, hp_tune_vals, weights_dir, save_results_csv)
+            
+            #for hydroterrane model
+            del site_perf
+            weights_dir = os.path.join(weights_top_dir, 'hydroterrane',rep,'Terrane_'+ht)
+            out_dir = os.path.join(model_run_dir,'hydroterrane',rep, site)
+            run_id = os.path.join(model_run_id,'hydroterrane', rep, site)
+
+            read_input_data_from_file = True
+            input_file_loc = os.path.join(model_run_dir,'global', rep, site)
+            
+            print('-----------------------------------------------------------------------')
+            print('Hydroterrane Model')
+            print('Training site: ', site, ' # ', str(i+1), ' of 5 out sample sites')
+            #print('Reading model weights from : ', weights_dir)
+            #print('Writing results to: ', out_dir)
+            print('-----------------------------------------------------------------------')
+        
+            site_perf = run_single_site_model_c(netcdf_loc, run_config_loc, site, station_nm_list, 
+                                   read_input_data_from_file, input_file_loc, out_dir, run_id,
+                                   train_model, multi_site, hp_tune, hp_tune_vals, weights_dir, save_results_csv)
+        
+        
+
 
 def wrapper_run_single_site_model_c(run_config_loc):
     with open(run_config_loc) as stream:
@@ -639,7 +762,7 @@ def wrapper_run_single_site_model_c(run_config_loc):
             print('Training site: ', site, ' # ', str(i+1), ' of 46 sites')
             print('-----------------------------------------------------------------------')
         
-            site_perf = run_single_site_model_c(netcdf_loc, config_loc, site_no_list, station_nm_list, 
+            site_perf = run_single_site_model_c(netcdf_loc, run_config_loc, site_no_list, station_nm_list, 
                                    read_input_data_from_file, input_file_loc, out_dir, run_id,
                                    train_model, multi_site, hp_tune, hp_tune_vals, weights_dir, save_results_csv)
         
@@ -736,7 +859,7 @@ def wrapper_single_site_model_hyperparameter_tuning(run_config_loc):
                 #this is the location to read the data in from if it has already been created
                 input_file_loc = os.path.join(input_file_dir, site)
             
-                site_perf = run_single_site_model_c(netcdf_loc, config_loc, site_no_list, station_nm_list, 
+                site_perf = run_single_site_model_c(netcdf_loc, run_config_loc, site_no_list, station_nm_list, 
                                        read_input_data_from_file, input_file_loc, out_dir, run_id,
                                        train_model, multi_site, hp_tune = hp_tune, hp_tune_vals = hp_tune_vals_run, weights_dir = weights_dir, save_results_csv = save_results_csv)
             
@@ -802,7 +925,7 @@ def wrapper_run_cluster_model(run_config_loc):
                 read_input_data_from_file = True
                 input_file_loc = os.path.join('03_model/out/multi_site',model_run_id,'Rep_00','Cluster_0'+str(group))
             
-            run_multi_site_model_c(netcdf_loc, config_loc, site_no_list, station_nm_list, 
+            run_multi_site_model_c(netcdf_loc, run_config_loc, site_no_list, station_nm_list, 
                        read_input_data_from_file, input_file_loc, out_dir, run_id,
                        train_model, multi_site, fine_tune, weights_dir, hp_tune, hp_tune_vals, save_results_csv)
 
@@ -862,7 +985,7 @@ def wrapper_run_hydroterrane_model(run_config_loc):
                 read_input_data_from_file = True
                 input_file_loc = os.path.join('03_model/out/multi_site',model_run_id,'Rep_00','Terrane_'+str(group))
             
-            run_multi_site_model_c(netcdf_loc, config_loc, site_no_list, station_nm_list, 
+            run_multi_site_model_c(netcdf_loc, run_config_loc, site_no_list, station_nm_list, 
                        read_input_data_from_file, input_file_loc, out_dir, run_id,
                        train_model, multi_site, fine_tune, weights_dir, hp_tune, hp_tune_vals, save_results_csv)
 

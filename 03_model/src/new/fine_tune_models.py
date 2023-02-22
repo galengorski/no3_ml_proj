@@ -8,7 +8,7 @@ Created on Thu Jan 26 14:47:54 2023
 #%%
 import sys
 sys.path.append("/Users/galengorski/Documents/GitHub/no3_ml_proj/04_analysis/src")
-print(sys.path)
+#print(sys.path)
 import lstm_modeling_functions as lmf
 import expected_gradients_functions as egf
 #%%
@@ -36,8 +36,12 @@ import expected_gradients_functions as egf
 #lmf.wrapper_run_cluster_model(run_config_loc)
 #lmf.wrapper_run_hydroterrane_model(run_config_loc)
 #%% Run expected gradient calcs for global model
+#run_config_loc = '03_model/multi_site_run_config.yaml'
+#egf.calc_expected_gradients_all_sites(run_config_loc)
+#%%
 run_config_loc = '03_model/multi_site_run_config.yaml'
-egf.calc_expected_gradients_all_sites(run_config_loc)
+egf.wrapper_fine_tune_multi_site_models(run_config_loc)
+
 
 
 

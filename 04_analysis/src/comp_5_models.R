@@ -58,6 +58,202 @@ write_csv(all_models, file.path(gd, paste0('04_analysis/out/all_models_summary_'
 
 
 ###########################################
+#Site summaries for updated models
+gh <- '~/Documents/GitHub/no3_ml_proj/'
+gd <- '~/galengorski@berkeley.edu - Google Drive/My Drive/ESDL Postdoc/02_Projects/no3_ml_proj/'
+
+all_models <- read_csv(file.path(gd, paste('04_analysis/out/all_models_summary_2023-02-09.csv')))
+
+basin_char <- read_csv(file.path(gh, '04_analysis/out/basin_char_w_clusters_hydroterranes_230208.csv'))
+sites <- basin_char$site_no
+reps <- 10
+
+ss_run_id <- 'Run_00_Full_230130'
+g_run_id <- 'Run_01_230201_Baseline'
+cl_run_id <- 'Run_06_C_230208'
+ht_run_id <- 'Run_03_HT_230202'
+
+for(j in 1:length(unique(basin_char$site_no))){
+
+  site <- unique(basin_char$site_no)[j]
+  
+  #site name
+  site_nm <- basin_char %>%
+    filter(site_no == site) %>%
+    pull(station_nm)
+  
+  #cluster
+  cluster <- basin_char %>%
+    filter(site_no == site) %>%
+    pull(cluster)
+  
+  #ht
+  hydro_terrane <- basin_char %>%
+    filter(site_no == site) %>%
+    pull(hydro_terrane)
+  
+  
+  print(site_nm)
+  
+  
+  #single-site
+  single_site_run_summary <- data.frame()
+  site_temp <- read_csv(file.path(paste0(gd,'03_model/out/single_site/',ss_run_id,'/Rep_00'),site,'ModelResults.csv'),show_col_types = FALSE)[,c("DateTime","Labeled","Train/Val/Test")]
+  for (j in 1:reps){
+    rep <- str_pad(j-1, 2, pad = '0')
+    site_rep_temp <- read_csv(file.path(paste0(gd,'03_model/out/single_site/',ss_run_id),paste0('Rep_',rep),site,'ModelResults.csv'),show_col_types = FALSE)[,"Predicted"]
+    site_temp <- cbind(site_temp,site_rep_temp) 
+  }
+  site_temp$Predicted_mean <- rowMeans(site_temp[grepl( "Predicted" , names( site_temp ) )]) 
+  site_temp_test <- site_temp[site_temp$`Train/Val/Test` == 'Testing',]
+  colnames(site_temp_test)[4:13] <- paste0('Rep_',seq(1:10))
+  site_temp_summary <- site_temp_test %>%
+    tibble() %>%
+    rename('Set' = `Train/Val/Test`) 
+  
+  #global
+  global_run_summary <- data.frame()
+  site_temp <- read_csv(file.path(paste0(gh,'03_model/out/multi_site/',g_run_id,'/Rep_00'),site,'ModelResults.csv'),show_col_types = FALSE)[,c("DateTime","Labeled","Train/Val/Test")]
+  for (j in 1:reps){
+    rep <- str_pad(j-1, 2, pad = '0')
+    site_rep_temp <- read_csv(file.path(paste0(gh,'03_model/out/multi_site/',g_run_id),paste0('Rep_',rep),site,'ModelResults.csv'),show_col_types = FALSE)[,"Predicted"]
+    site_temp <- cbind(site_temp,site_rep_temp) 
+  }
+  site_temp$Predicted_mean <- rowMeans(site_temp[grepl( "Predicted" , names( site_temp ) )]) 
+  site_temp_test <- site_temp[site_temp$`Train/Val/Test` == 'Testing',]
+  colnames(site_temp_test)[4:13] <- paste0('Rep_',seq(1:10))
+  global_temp_summary <- site_temp_test %>%
+    tibble() %>%
+    rename('Set' = `Train/Val/Test`) 
+  
+  #cluster
+  cluster_run_summary <- data.frame()
+  clust <- paste0('Cluster_0',basin_char %>%
+      filter(site_no == site) %>%
+      pull(cluster))
+  site_temp <- read_csv(file.path(paste0(gh,'03_model/out/multi_site/',cl_run_id,'/Rep_00'),clust,site,'ModelResults.csv'),show_col_types = FALSE)[,c("DateTime","Labeled","Train/Val/Test")]
+  for (j in 1:reps){
+      rep <- str_pad(j-1, 2, pad = '0')
+      site_rep_temp <- read_csv(file.path(paste0(gh,'03_model/out/multi_site/',cl_run_id),paste0('Rep_',rep),clust,site,'ModelResults.csv'),show_col_types = FALSE)[,"Predicted"]
+      site_temp <- cbind(site_temp,site_rep_temp) 
+  }
+  
+  site_temp$Predicted_mean <- rowMeans(site_temp[grepl( "Predicted" , names( site_temp ) )]) 
+  site_temp_test <- site_temp[site_temp$`Train/Val/Test` == 'Testing',]
+  colnames(site_temp_test)[4:13] <- paste0('Rep_',seq(1:10))
+  clust_temp_summary <- site_temp_test %>%
+    tibble() %>%
+    rename('Set' = `Train/Val/Test`) 
+  
+  #hydroterrane
+  ht_run_summary <- data.frame()
+  ht <- paste0('Terrane_',basin_char %>%
+                    filter(site_no == site) %>%
+                    pull(hydro_terrane))
+  site_temp <- read_csv(file.path(paste0(gh,'03_model/out/multi_site/',ht_run_id,'/Rep_00'),ht,site,'ModelResults.csv'),show_col_types = FALSE)[,c("DateTime","Labeled","Train/Val/Test")]
+  for (j in 1:reps){
+    rep <- str_pad(j-1, 2, pad = '0')
+    site_rep_temp <- read_csv(file.path(paste0(gh,'03_model/out/multi_site/',ht_run_id),paste0('Rep_',rep),ht,site,'ModelResults.csv'),show_col_types = FALSE)[,"Predicted"]
+    site_temp <- cbind(site_temp,site_rep_temp) 
+  }
+  
+  site_temp$Predicted_mean <- rowMeans(site_temp[grepl( "Predicted" , names( site_temp ) )]) 
+  site_temp_test <- site_temp[site_temp$`Train/Val/Test` == 'Testing',]
+  colnames(site_temp_test)[4:13] <- paste0('Rep_',seq(1:10))
+  ht_temp_summary <- site_temp_test %>%
+    tibble() %>%
+    rename('Set' = `Train/Val/Test`) 
+  
+  all_ts <- rbind(
+    site_temp_summary %>%
+      mutate(run = 'Single-site'),
+    global_temp_summary %>%
+      mutate(run = 'Global'),
+    clust_temp_summary %>%
+      mutate(run = "Clustered"),
+    ht_temp_summary %>%
+      mutate(run = 'Hydro terrane'),
+    ht_temp_summary %>%
+      mutate(run = 'Observed') %>%
+      mutate(Predicted_mean = Labeled))
+  
+  g_ss <- all_ts %>%
+    mutate(models = factor(run, levels = c('Observed',"Single-site","Clustered","Hydro terrane","Global"))) %>%
+    ggplot(aes(x = DateTime, y = Predicted_mean, color = models))+
+    geom_line()+
+    scale_color_manual(values = c('black','#00bbf9','#ff595e','#ffca3a','#00f5d4'))+
+    theme_bw()+
+    ylab('[NO3-N] (mg/L)')+
+    xlab('')+
+    ggtitle(paste0(site_nm,' | Cluster ', cluster,' | Hydro Terrane ',hydro_terrane))+
+    theme(legend.position="none",
+          panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+          axis.text.y = element_text(size = 12),
+          axis.text.x = element_text(size = 12))
+  
+  cdf <- all_ts %>%
+    filter(!is.na(Predicted_mean)) %>%
+    mutate(models = factor(run, levels = c('Observed',"Single-site","Clustered","Hydro terrane","Global"))) %>%
+    group_by(models) %>%
+    arrange(Predicted_mean) %>%
+    mutate(idx = row_number(models)/sum(!is.na(Predicted_mean))) %>%
+    ggplot(aes(y = idx, x = Predicted_mean, col = models))+
+    geom_line()+
+    theme_bw()+
+    scale_color_manual(values = c('black','#00bbf9','#ff595e','#ffca3a','#00f5d4'))+
+    ylab('CDF')+
+    xlab('[NO3-N] (mg/L)')+
+    theme(legend.position="none",
+          panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+          axis.text.y = element_text(size = 10),
+          axis.text.x = element_text(size = 10))
+  
+  nrmse_bpl <- all_models %>%
+    filter(site_no == site) %>%
+    mutate(models = factor(run, 
+                           levels = c("Single-site","Clustered","Hydro terrane","global"),
+                           labels = c("Single-site","Clustered","Hydro terrane","Global"))) %>%
+    ggplot(aes(x = models, y = Testing_NRMSE, fill = models))+
+    geom_bar(stat = 'identity', color = 'black')+
+    scale_fill_manual(values = c('#00bbf9','#ff595e','#ffca3a','#00f5d4'))+
+    theme_bw()+
+    ylab('NRMSE')+
+    theme(panel.grid.major = element_blank(), 
+          panel.grid.minor = element_blank(),
+          legend.title = element_blank(),
+          axis.text.y = element_text(size = 10),
+          axis.text.x = element_text(size = 10),
+          axis.title.x = element_blank(),
+          legend.position = 'none')+
+    scale_x_discrete(guide = guide_axis(n.dodge = 2))
+  
+  nse_bpl <- all_models %>%
+    filter(site_no == site) %>%
+    mutate(models = factor(run, 
+                           levels = c("Single-site","Clustered","Hydro terrane","global"),
+                           labels = c("Single-site","Clustered","Hydro terrane","Global"))) %>%
+    ggplot(aes(x = models, y = Testing_NSE, fill = models))+
+    geom_bar(stat = 'identity', color = 'black')+
+    scale_fill_manual(values = c('#00bbf9','#ff595e','#ffca3a','#00f5d4'))+
+    theme_bw()+
+    ylab('NSE')+
+    theme(panel.grid.major = element_blank(), 
+          panel.grid.minor = element_blank(),
+          legend.title = element_blank(),
+          axis.text.y = element_text(size = 10),
+          axis.text.x = element_text(size = 10),
+          axis.title.x = element_blank())+
+    scale_x_discrete(guide = guide_axis(n.dodge = 2))
+  
+  nse_bpl_nl <- nse_bpl + theme(legend.position = 'none')
+  legend <- get_legend(nse_bpl)
+  
+  lower_panel <- plot_grid(cdf, nrmse_bpl, nse_bpl_nl, legend, nrow = 1)
+  plot_grid(g_ss, lower_panel, nrow = 2, align = 'hv')
+  ggsave(paste0(file.path(gh,'04_analysis/figs/site_summaries',site),'.png'), height = 6, width = 10)
+}
+
+###########################################
 best_models <- all_models %>%
   group_by(site_no) %>%
   arrange(Testing_RMSE, .by_group = TRUE) %>%
@@ -76,7 +272,9 @@ all_models %>%
   #ylim(0,1)+
   facet_wrap(.~site_no, scales = 'free_y')
 
-all_models %>% group_by(run) %>% summarize(med_r = median(Testing_NSE))
+all_models %>% 
+  group_by(run) %>% 
+  dplyr::summarize(med_r = median(Testing_NSE))
 
 
 #make a map of the best models for each site
@@ -218,7 +416,7 @@ cdf <- all_ts %>%
   theme(legend.position="none",
   panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
-rmse_bpl <- all_models %>%
+nrmse_bpl <- all_models %>%
   filter(site_no == site) %>%
   mutate(Model = factor(run, levels = c("Single-site","Clustered","Hydro terrane","Multi-site"))) %>%
   ggplot(aes(x = Model, y = Testing_RMSE, fill = Model))+

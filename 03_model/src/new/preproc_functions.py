@@ -61,12 +61,44 @@ def xarray_to_df_mod_feat(netcdf_location, site_no, feat_list):
     print(site_no,' data read to dataframe')
     return site_data_df
 
-def split_norm_combine(data, seq_len, trn_frac, val_frac, test_frac, config_loc):
+def split_norm_combine(data, seq_len, trn_frac, val_frac, test_frac, config_loc, run_config_loc, weights_dir):
     
     with open(config_loc) as stream:
         config = yaml.safe_load(stream)
         
+    with open(run_config_loc) as stream:
+        run_config = yaml.safe_load(stream)    
+        
     predict_period = config['predict_period']
+    fine_tune = run_config['fine_tune']
+    data_resolution = run_config['data_resolution']
+    
+    if fine_tune:
+        df = data.copy()
+        print('Resampling data at '+data_resolution+' resolution for fine tuning')
+        if data_resolution == 'weekly':
+            df['week'] = df.index.strftime('%Y-%U')
+            retain = df.groupby('week').sample(n = 1).index
+            df['drop'] = np.where(df.index.isin(retain),False,True)
+            df.loc[df['drop'],'Nitrate'] = np.nan
+            df = df.drop(columns = ['week','drop'])
+        elif data_resolution == 'monthly':
+            df['month'] = df.index.strftime('%Y-%m')
+            retain = df.groupby('month').sample(n = 1).index
+            df['drop'] = np.where(df.index.isin(retain),False,True)
+            df.loc[df['drop'],'Nitrate'] = np.nan
+            df = df.drop(columns = ['month','drop'])
+        elif data_resolution == 'quarterly':
+            df['year'] = df.index.year
+            df['quarter'] = df.index.quarter
+            df['yq'] = df['year'].astype(str)+'-'+df['quarter'].astype(str)
+            retain = df.groupby('yq').sample(n = 1).index
+            df['drop'] = np.where(df.index.isin(retain),False,True)
+            df.loc[df['drop'],'Nitrate'] = np.nan
+            df = df.drop(columns = ['year','quarter','yq','drop'])
+        del data
+        data = df
+            
     
     #get rid of nitrate na values
     data_no_nans = data['Nitrate'].dropna()
@@ -101,13 +133,25 @@ def split_norm_combine(data, seq_len, trn_frac, val_frac, test_frac, config_loc)
     train_val = data[:end_val_date]
     n_obs_train_val = train_val.Nitrate.dropna().shape[0]
     test = data[start_test_date:end_test_date]
-    n_obs_test = test.Nitrate.dropna().shape[0]
+    n_obs_test = test.Nitrate.dropna().shape[0]    
     
-    #normalize sets separately
-    train_norm = (train - train.mean(axis=0)) / train.std(axis=0)
-    val_norm = (val - train.mean(axis=0)) / train.std(axis=0)
-    train_val_norm = (train_val - train.mean(axis=0)) / train.std(axis=0)
-    test_norm = (test - train.mean(axis=0)) / train.std(axis=0)
+    if fine_tune:
+        with open(os.path.join(weights_dir,'all_variables_means_stds'), 'rb') as all_variables_means_stds:
+            all_variables_means_stds_full_dataset = pickle.load(all_variables_means_stds)
+        #normalize with entire dataset        
+        train_norm = (train-all_variables_means_stds_full_dataset['train_mean'])/all_variables_means_stds_full_dataset['train_std']
+        val_norm = (val-all_variables_means_stds_full_dataset['train_mean'])/all_variables_means_stds_full_dataset['train_std']
+        train_val_norm = (train_val-all_variables_means_stds_full_dataset['train_mean'])/all_variables_means_stds_full_dataset['train_std']
+        test_norm = (test-all_variables_means_stds_full_dataset['train_mean'])/all_variables_means_stds_full_dataset['train_std']    
+        print('Normalizing with multi_site datasest')
+    else:
+    
+        #normalize sets separately
+        train_norm = (train - train.mean(axis=0)) / train.std(axis=0)
+        val_norm = (val - train.mean(axis=0)) / train.std(axis=0)
+        train_val_norm = (train_val - train.mean(axis=0)) / train.std(axis=0)
+        test_norm = (test - train.mean(axis=0)) / train.std(axis=0)
+        print('Normalizing with single-site dataset')
     
     if predict_period == 'full':
         full_norm = pd.concat([train_norm, test_norm])
@@ -629,10 +673,16 @@ def full_prepare_multi_site_data(netcdf_loc, config_loc, site_no_list, station_n
 
     return concat_data, n_means_stds
 
-def full_prepare_single_site_data(netcdf_loc, config_loc, site_no, station_nm, out_dir, hp_tune, hp_tune_vals):
+def full_prepare_single_site_data(netcdf_loc, run_config_loc, site_no, station_nm, out_dir, hp_tune, hp_tune_vals, weights_dir):
+    
+    with open(run_config_loc) as stream:
+            run_config = yaml.safe_load(stream)
+            
+    config_loc = run_config['config_loc']
+    
     with open(config_loc) as stream:
             config = yaml.safe_load(stream)
-    
+
     
     if hp_tune:
         seq_len = hp_tune_vals['seq_len']
@@ -655,9 +705,11 @@ def full_prepare_single_site_data(netcdf_loc, config_loc, site_no, station_nm, o
     df = xarray_to_df_mod_feat(netcdf_loc, site_no, feat_list)
     if len(df.columns[df.isna().any()].tolist()) > 0:
         print(site_no+ " nans found:",df.columns[df.isna().any()].tolist())
+    
+
     #add individual site no
     #split and normalize input data
-    norm_sets, set_dates, n_means_stds_n_obs = split_norm_combine(df, seq_len, trn_frac, val_frac, test_frac, config_loc)
+    norm_sets, set_dates, n_means_stds_n_obs = split_norm_combine(df, seq_len, trn_frac, val_frac, test_frac, config_loc, run_config_loc, weights_dir)
     #arrange input data into arrays of [data_len, seq_len, num_feat]
     prepped_drivers_data = prepare_data(norm_sets['full_norm'], seq_len, set_dates)
     
