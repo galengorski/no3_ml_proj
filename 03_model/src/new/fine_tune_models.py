@@ -40,7 +40,7 @@ import expected_gradients_functions as egf
 #egf.calc_expected_gradients_all_sites(run_config_loc)
 #%%
 run_config_loc = '03_model/multi_site_run_config.yaml'
-egf.wrapper_fine_tune_multi_site_models(run_config_loc)
+lmf.wrapper_fine_tune_multi_site_models(run_config_loc)
 
 
 
