@@ -309,7 +309,8 @@ def save_results(config_loc, preds_unnorm, site_data, out_dir, station_nm, site_
         config = yaml.safe_load(stream)
         
     predict_period = config['predict_period']
-    
+    print(site_data['val_dates'], site_data['val_dates'].shape)
+
     if predict_period == 'full':
         plot_label_set = 'Testing'
         full_dict = {
@@ -320,8 +321,12 @@ def save_results(config_loc, preds_unnorm, site_data, out_dir, station_nm, site_
             }
         full_df_long = pd.DataFrame(full_dict)
         full_df_long = full_df_long.set_index('DateTime')
-        val_start = site_data['val_dates'][0]
-        full_df_long["Train/Val/Test"] = np.repeat('Training',len(full_df_long[full_df_long.index <= val_start])).tolist()+np.repeat('Testing',len(full_df_long[full_df_long.index > val_start])).tolist()
+        if len(site_data['val_dates']) == 0:
+            train_end = site_data['train_dates'][-1]
+            full_df_long["Train/Val/Test"] = np.repeat('Training',len(full_df_long[full_df_long.index <= train_end])).tolist()+np.repeat('Testing',len(full_df_long[full_df_long.index > train_end ])).tolist()
+        else:
+            val_start = site_data['val_dates'][0]
+            full_df_long["Train/Val/Test"] = np.repeat('Training',len(full_df_long[full_df_long.index <= val_start])).tolist()+np.repeat('Testing',len(full_df_long[full_df_long.index > val_start])).tolist()
     else:
         plot_label_set = 'Validation'
         full_dict = {
@@ -341,8 +346,13 @@ def save_results(config_loc, preds_unnorm, site_data, out_dir, station_nm, site_
     
     p_train = np.array(full_df[full_df['Train/Val/Test'] == 'Training'].Predicted)
     l_train = np.array(full_df[full_df['Train/Val/Test'] == 'Training'].Labeled)
-        
-    site_dict = save_config(out_dir, config_loc, station_nm, site_no, p_train, l_train, p_val, l_val, hp_tune, hp_tune_vals, run_id, multi_site)
+    
+    #if there are not any observations in the val set then don't save the run summary
+    #this only happens during fine tuning with quarterly down sampling
+    if len(site_data['val_dates'] != 0):    
+        site_dict = save_config(out_dir, config_loc, station_nm, site_no, p_train, l_train, p_val, l_val, hp_tune, hp_tune_vals, run_id, multi_site)
+    else:
+        site_dict = {}
      
     if save_results_csv:
         if multi_site:
@@ -383,6 +393,7 @@ def save_config(out_path, config_loc, station_nm, site_no, p_train, l_train, p_v
         learning_rate = config['learning_rate']
         seq_len = config['seq_len']
         num_layers = config['num_layers']
+        
     
     rmse_training = he.evaluator(he.rmse, p_train, l_train)
     rmse_validation = he.evaluator(he.rmse, p_val, l_val)
