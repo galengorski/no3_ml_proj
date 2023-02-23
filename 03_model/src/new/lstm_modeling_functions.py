@@ -320,7 +320,7 @@ def save_results(config_loc, preds_unnorm, site_data, out_dir, station_nm, site_
             }
         full_df_long = pd.DataFrame(full_dict)
         full_df_long = full_df_long.set_index('DateTime')
-        val_start = val_start = site_data['val_dates'][0]
+        val_start = site_data['val_dates'][0]
         full_df_long["Train/Val/Test"] = np.repeat('Training',len(full_df_long[full_df_long.index <= val_start])).tolist()+np.repeat('Testing',len(full_df_long[full_df_long.index > val_start])).tolist()
     else:
         plot_label_set = 'Validation'
@@ -584,7 +584,6 @@ def wrapper_run_multi_site_model_c(run_config_loc):
                    train_model, multi_site, fine_tune, weights_dir, hp_tune, hp_tune_vals, save_results_csv)
 
 def run_single_site_model_c(netcdf_loc, run_config_loc, site_no, station_nm, read_input_data_from_file, input_file_loc, out_dir, run_id, train_model, multi_site, hp_tune, hp_tune_vals, weights_dir, save_results_csv):
-#    out_dir = os.path.join('03_model/out/multi_site/',model_run_id)
     
     os.makedirs(out_dir, exist_ok = True)
     
