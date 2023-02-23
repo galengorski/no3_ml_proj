@@ -11,7 +11,7 @@ weights_dir: '03_model/out/multi_site/Run_07_MS_OOS_230208'
 read_input_data_from_file: False
 input_file_loc : None
 
-model_run_id : 'Run_11_FineTune_230223_Monthly'
+model_run_id : 'Run_12_FineTune_230223_Quarterly'
 n_reps: 10
 
 
@@ -20,7 +20,7 @@ n_reps: 10
 #fine_tune should be set to True
 train_model : True
 #data resolution has the options: "weekly", "monthly", "quarterly" or "all"
-data_resolution: 'monthly'
+data_resolution: 'quarterly'
 save_results_csv : True
 hp_tune : False
 hp_tune_vals : {}
