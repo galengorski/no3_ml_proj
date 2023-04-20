@@ -13,12 +13,10 @@ from netCDF4 import Dataset,num2date,date2num
 import numpy as np
 import pandas as pd
 #%%
-hydro_data = pd.read_csv('02_munge/out/all_sites_data_bfs.csv', 
-                         usecols = ['site_no','Date','discharge','baseflow','quickflow','nitrate','discharge_interp'],
+hydro_data = pd.read_csv('01_fetch/out/hydro_filled_220128.csv', 
+                         usecols = ['site_no','Date','discharge','nitrate','discharge_interp'],
                          dtype = {'site_no':str,
                                   'discharge': float,
-                                  'baseflow': float,
-                                  'quickflow':float,
                                   'nitrate': float,
                                   'discharge_interp':str
                                   },
@@ -29,7 +27,7 @@ hydro_data = pd.read_csv('02_munge/out/all_sites_data_bfs.csv',
 site_info = pd.read_csv('01_fetch/out/site_list_220507.csv', dtype = {'site_no':str})
 sites = site_info.site_no.unique()
 
-model_input_nc = netCDF4.Dataset('02_munge/out/model_input_rolling.nc',mode='w')
+model_input_nc = netCDF4.Dataset('02_munge/out/model_input_230420.nc',mode='w')
 model_input_nc.title='Modeling input data'
 
 for i, single_site in enumerate(sites):
@@ -38,6 +36,7 @@ for i, single_site in enumerate(sites):
     #calculate 7 day moving average
     hydro_data_temp['nitrate_rolling'] = hydro_data_temp['nitrate'].rolling("7D", min_periods = 3, center=False).mean()
     hydro_data_temp['nitrate'] = hydro_data_temp['nitrate_rolling']
+    hydro_data_temp['discharge_l10'] = np.log10(hydro_data_temp['discharge'])
     met_data = pd.read_csv('01_fetch/out/met_data/'+single_site+'_met_data.csv',
                            parse_dates = ['date'], index_col = 'date')
     #make sure they have the same length
@@ -108,10 +107,8 @@ for i, single_site in enumerate(sites):
     #dynamic variables
     date = site.createVariable('Date','f8','time')
     discharge = site.createVariable('Discharge','f8','time')
-    baseflow = site.createVariable('Baseflow','f8','time')
-    quickflow = site.createVariable('Quickflow','f8','time')
+    discharge_l10 = site.createVariable('Discharge_l10','f8','time')
     nitrate = site.createVariable('Nitrate','f8','time')
-    #nitrate_rolling = site.createVariable('Nitrate_rolling', 'f8','time')
     precip = site.createVariable('Precip','f8','time')
     tmax = site.createVariable('TempMax','f8','time')
     tmin = site.createVariable('TempMin','f8','time')
@@ -127,10 +124,8 @@ for i, single_site in enumerate(sites):
     date.range = [datetime.strftime(hydro_met.index.min(), '%Y-%m-%d'), datetime.strftime(hydro_met.index.max(), '%Y-%m-%d')]
     discharge[:] = hydro_met.discharge
     discharge.units = 'cfs'
-    baseflow[:] = hydro_met.baseflow
-    baseflow.units = 'cfs'
-    quickflow[:] = hydro_met.quickflow
-    quickflow.units = 'cfs'
+    discharge_l10[:] = hydro_met.discharge_l10
+    discharge_l10.units = 'none'
     nitrate[:] = hydro_met.nitrate
     nitrate.units = 'mg/L [NO3-NO2]'
     #nitrate_rolling[:] = hydro_met.nitrate_rolling

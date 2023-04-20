@@ -51,7 +51,7 @@ def xarray_to_df_mod_feat(netcdf_location, site_no, feat_list):
     site_data_df['NLCD_FOR'] = site_data_df['NLCD_41']+site_data_df['NLCD_42']+site_data_df['NLCD_43']
     site_data_df['NLCD_AG'] = site_data_df['NLCD_81']+site_data_df['NLCD_82']
     site_data_df['NLCD_WTLND'] = site_data_df['NLCD_90']+site_data_df['NLCD_95']
-    site_data_df['fert_uN_mt_kmAg'] = site_data_df['fert_uN_mt_sqkm']*(site_data_df['NLCD_82']*site_data_df['TOT_BASIN_AREA'])
+    
     
     feat_list_c = [e for e in feat_list_c if e not in add_feat]
     
