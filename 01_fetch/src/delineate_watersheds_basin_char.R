@@ -31,7 +31,7 @@ library(climateR)
 
 site_data <- read_csv('01_fetch/out/site_list_220507.csv')
 all_data <- read_csv('01_fetch/out/hydro_filled_220128.csv')
-fertilizer_data <- read.table('~/Google Drive/My Drive/ESDL Postdoc/02_Projects/Midwest_USGS/02_Spatial_Data/Fertilizer_Data/2012_catchment_fert_use_estimates_N_P.txt', header = TRUE, sep = ',')
+fertilizer_data <- read.table('01_fetch/in/Stewart_Fertilizer/2012_catchment_fert_use_estimates_N_P.txt', header = TRUE, sep = ',')
 
 #i = 2
 
@@ -69,19 +69,19 @@ for (i in 1:nrow(site_data)){
   #we'll use the unconditinal estimates fert_uN_mt see intro to report paragraph 5
   ws_fert <- fertilizer_data %>%
     filter(COMID %in% test$UT_flowlines$nhdplus_comid) %>%
-    mutate(uN_mt_sqkm = uN_mt/cropsqkm, kN_mt_sqkm = kN_mt/cropsqkm) %>%
-    colSums(.,na.rm = TRUE) 
+    colSums(.,na.rm = TRUE)
+
     
 
   #add fertilizer to basin char
   basin_char$total <- rbind(basin_char$total, data.frame(characteristic_id = c('fert_uN_mt_sqkm', 'fert_kN_mt_sqkm'),
-                                                         characteristic_value = c(as.numeric(ws_fert[7]) ,as.numeric(ws_fert[8])),
+                                                         characteristic_value = c(as.numeric(ws_fert[['uN_mt']]/ws_fert[['cropsqkm']]) ,as.numeric(ws_fert[['kN_mt']]/ws_fert[['cropsqkm']])),
                                                          percent_nodata = c(NA,NA)))
   #write to file
   write_csv(basin_char$total,paste0('01_fetch/out/basin_char/',site_data$site_no[i],'_basin_char.csv'))
 
   #for meta data
-  #char_meta <- discover_nldi_characteristics()
+  #char_meta <- nhdplusTools::discover_nldi_characteristics()
   #calculate time
   endTime <- Sys.time()
   basin_char_time = endTime-startTime
@@ -94,39 +94,39 @@ for (i in 1:nrow(site_data)){
   
   #### MET DATA
   #GridMET data
-  startTime <- Sys.time()
-  #download grid met data for basin
-  gm_extent <- getGridMET(test$basin, param = c('prcp','tmin','tmax','srad'), startDate = single_site$Date[1], endDate = single_site$Date[nrow(single_site)])
-  #convert raster layers to brick
-  gm_brick <- brick(gm_extent)
-  #getGridMET returns the raster extent so clip out the basin from the extent
-  gm_basin_mask <- mask(gm_brick, test$basin, maskValue = NA)
-  #take the daily mean of all parameters
-  n <- cellStats(gm_basin_mask[[names(gm_basin_mask)]], mean)
-  #clean up data
-  mean_vals <- tibble(date = names(n), value = unname(n)) %>%
-    separate(date, c('year','month','day','variable')) %>%
-    mutate(year = gsub("X", "", year)) %>%
-    mutate(date = make_date(year, month, day)) %>%
-    dplyr::select(date, value, variable) %>%
-    pivot_wider(names_from = variable, values_from = value) %>%
-    mutate(prcp = `1`, tmin = `2`, tmax = `3`, srad = `4`) %>%
-    dplyr::select(date, prcp, srad, tmin, tmax)
-  #write to file
-  write_csv(mean_vals, paste0('01_fetch/out/met_data/',site_data$site_no[i],'_met_data.csv'))
-  
-  #calculate time
-  endTime <- Sys.time()  
-  met_time = endTime-startTime
-  #print time
-  print(paste0('Site ',i,' of ',nrow(site_data), '| Met data saved: '))
-  print(met_time)
-  
-  #calculate total time
-  iter_end <- Sys.time()
-  iter_time = iter_end-iter_start
-  #print total time
-  print(paste0('Site ',i,' of ',nrow(site_data), '| Total time: '))
-  print(iter_time)
-  
+  # startTime <- Sys.time()
+  # #download grid met data for basin
+  # gm_extent <- getGridMET(test$basin, param = c('prcp','tmin','tmax','srad'), startDate = single_site$Date[1], endDate = single_site$Date[nrow(single_site)])
+  # #convert raster layers to brick
+  # gm_brick <- brick(gm_extent)
+  # #getGridMET returns the raster extent so clip out the basin from the extent
+  # gm_basin_mask <- mask(gm_brick, test$basin, maskValue = NA)
+  # #take the daily mean of all parameters
+  # n <- cellStats(gm_basin_mask[[names(gm_basin_mask)]], mean)
+  # #clean up data
+  # mean_vals <- tibble(date = names(n), value = unname(n)) %>%
+  #   separate(date, c('year','month','day','variable')) %>%
+  #   mutate(year = gsub("X", "", year)) %>%
+  #   mutate(date = make_date(year, month, day)) %>%
+  #   dplyr::select(date, value, variable) %>%
+  #   pivot_wider(names_from = variable, values_from = value) %>%
+  #   mutate(prcp = `1`, tmin = `2`, tmax = `3`, srad = `4`) %>%
+  #   dplyr::select(date, prcp, srad, tmin, tmax)
+  # #write to file
+  # write_csv(mean_vals, paste0('01_fetch/out/met_data/',site_data$site_no[i],'_met_data.csv'))
+  # 
+  # #calculate time
+  # endTime <- Sys.time()  
+  # met_time = endTime-startTime
+  # #print time
+  # print(paste0('Site ',i,' of ',nrow(site_data), '| Met data saved: '))
+  # print(met_time)
+  # 
+  # #calculate total time
+  # iter_end <- Sys.time()
+  # iter_time = iter_end-iter_start
+  # #print total time
+  # print(paste0('Site ',i,' of ',nrow(site_data), '| Total time: '))
+  # print(iter_time)
+  # 
 }
