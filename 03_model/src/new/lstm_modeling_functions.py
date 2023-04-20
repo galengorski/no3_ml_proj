@@ -321,12 +321,8 @@ def save_results(config_loc, preds_unnorm, site_data, out_dir, station_nm, site_
             }
         full_df_long = pd.DataFrame(full_dict)
         full_df_long = full_df_long.set_index('DateTime')
-        if len(site_data['val_dates']) == 0:
-            train_end = site_data['train_dates'][-1]
-            full_df_long["Train/Val/Test"] = np.repeat('Training',len(full_df_long[full_df_long.index <= train_end])).tolist()+np.repeat('Testing',len(full_df_long[full_df_long.index > train_end ])).tolist()
-        else:
-            val_start = site_data['val_dates'][0]
-            full_df_long["Train/Val/Test"] = np.repeat('Training',len(full_df_long[full_df_long.index <= val_start])).tolist()+np.repeat('Testing',len(full_df_long[full_df_long.index > val_start])).tolist()
+        train_end = site_data['train_dates'][-1]
+        full_df_long["Train/Val/Test"] = np.repeat('Training',len(full_df_long[full_df_long.index <= train_end])).tolist()+np.repeat('Testing',len(full_df_long[full_df_long.index > train_end ])).tolist()
     else:
         plot_label_set = 'Validation'
         full_dict = {
