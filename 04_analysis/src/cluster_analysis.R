@@ -101,10 +101,10 @@ cl_biplot <- fviz_pca_biplot(res.pca,
         #legend.position = 'none')
 cl_biplot
 
-#basin_char_cl_u@clusterObjs$kmeans$`2`$cluster %>% table()
-#basin_char_cl_u@clusterObjs$kmeans$`3`$cluster %>% table()
-#basin_char_cl_u@clusterObjs$kmeans$`4`$cluster %>% table()
-#basin_char_cl_u@clusterObjs$kmeans$`5`$cluster %>% table()
+basin_char_cl_u@clusterObjs$kmeans$`2`$cluster %>% table()
+basin_char_cl_u@clusterObjs$kmeans$`3`$cluster %>% table()
+basin_char_cl_u@clusterObjs$kmeans$`4`$cluster %>% table()
+basin_char_cl_u@clusterObjs$kmeans$`5`$cluster %>% table()
 basin_char_cl_u@clusterObjs$kmeans$`6`$cluster %>% table()
 # basin_char_cl_u@clusterObjs$kmeans$`7`$cluster %>% table()
 # basin_char_cl_u@clusterObjs$kmeans$`8`$cluster %>% table()
@@ -149,6 +149,9 @@ cluster_assig$cluster %>% table()
 cluster_reassig <- cluster_assig %>%
   mutate(cluster = recode(cluster, '1' = '5', '6' = '1'))
 
+#check to make sure the reassignment worked (cluster 1 should have 15, 2 has 3, 3 has 17, 4 has 5, and 5 has 6)
+cluster_reassig$cluster %>% table()
+
 basin_char_clusters <- basin_char_clean %>%
   dplyr::select(!`...1`) %>%
   relocate(station_nm, .after = site_no) %>%
@@ -160,7 +163,7 @@ hydro_terranes <- read_csv('04_analysis/out/basin_char_w_clusters_6_hydro_terran
 clusters_ht <- merge(basin_char_clusters, hydro_terranes, by = 'site_no') %>%
   tibble()
 
-#write_csv(clusters_ht, '04_analysis/out/basin_char_w_clusters_hydroterranes_230208.csv')
+write_csv(clusters_ht, '04_analysis/out/basin_char_w_clusters_hydroterranes_230421.csv')
 
 
 

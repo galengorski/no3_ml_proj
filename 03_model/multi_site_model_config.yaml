@@ -1,6 +1,6 @@
 # features used for predictions  
 #'Nitrate' has got to be in here for now
-feat_list: ['Nitrate','Discharge','Precip','TempMax','TempMin','SolarRad']
+feat_list: ['Nitrate','Discharge_l10','Precip','TempMax','TempMin','SolarRad']
 #are static features used
 static_features_used: True
 static_features: ['TOT_BASIN_AREA', 

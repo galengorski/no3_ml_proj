@@ -22,7 +22,7 @@ feat_list = ['TOT_BASIN_AREA', 'TOT_BASIN_SLOPE', 'lat', 'long', 'TOT_STREAM_SLO
              'TOT_NORM_STORAGE2013','TOT_MAJOR2013','TOT_NDAMS2013', 'TOT_NID_STORAGE2013',
              'TOT_LAKEPOND', 'TOT_RESERVOIR', 'TOT_SRL55AG', 'DTW', 'TRANSM', 'UNSAT_TT', 'WCON', 
              'NO3_DOM', 'NO3_PUB', 'fert_uN_mt_sqkm', 'NLCD_DEV', 'NLCD_FOR', 'NLCD_AG', 'NLCD_WTLND']
-netcdf_location = '02_munge/out/model_input_rolling.nc'
+netcdf_location = '02_munge/out/model_input_230420.nc'
 site_data_dict = {}
 for i, site_no in enumerate(site_info.site_no):
     site_data = ppf.xarray_to_df_mod_feat(netcdf_location, site_no, feat_list)
