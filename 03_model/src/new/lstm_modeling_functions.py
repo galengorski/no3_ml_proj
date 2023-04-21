@@ -309,8 +309,7 @@ def save_results(config_loc, preds_unnorm, site_data, out_dir, station_nm, site_
         config = yaml.safe_load(stream)
         
     predict_period = config['predict_period']
-    print(site_data['val_dates'], site_data['val_dates'].shape)
-
+    
     if predict_period == 'full':
         plot_label_set = 'Testing'
         full_dict = {
