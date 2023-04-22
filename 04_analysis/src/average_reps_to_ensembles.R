@@ -24,12 +24,12 @@ gh <- '~/Documents/GitHub/no3_ml_proj/'
 gd <- '~/galengorski@berkeley.edu - Google Drive/My Drive/ESDL Postdoc/02_Projects/no3_ml_proj/'
 
 training_dates <- read_csv(file.path('04_analysis/out/train_test_dates.csv'))
-basin_char <- read_csv(file.path(gh, '04_analysis/out/basin_char_w_clusters_hydroterranes_230208.csv'))
+basin_char <- read_csv(file.path(gh, '04_analysis/out/basin_char_w_clusters_hydroterranes_230421.csv'))
 sites <- basin_char$site_no
 reps <- 10
 
 ss_run_id <- 'Run_00_Full_230130'
-ms_run_id <- 'Run_01_230201_Baseline'
+ms_run_id <- 'Run_01_230420_All_Features'
 cl_run_id <- 'Run_06_C_230208'
 ht_run_id <- 'Run_03_HT_230202'
 
@@ -101,7 +101,7 @@ for (i in 1:length(sites)){
                                         Set = site_temp$Set, 
                                         Labeled = site_temp$Labeled, 
                                         Predicted_mean = rowMeans(site_temp[grepl( "Predicted" , names( site_temp ) )])) %>%
-    select(DateTime, Labeled, Predicted_mean, Set) %>%
+    dplyr::select(DateTime, Labeled, Predicted_mean, Set) %>%
     mutate(site_no = sites[i]))
     
 }

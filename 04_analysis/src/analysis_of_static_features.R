@@ -645,16 +645,22 @@ test <- hydro_data %>%
   dim()
   tail()
 
+clusters_ht <- read_csv('04_analysis/out/basin_char_w_clusters_hydroterranes_230208.csv')
+
+  
+states <- sf::st_as_sf(maps::map("state", plot = FALSE, fill = TRUE), crs = 4326)
+states_map <- maps::map("state", plot = FALSE, fill = FALSE)
+site_cluster <- st_as_sf(clusters_ht, coords = c('PHYS_LONG','PHYS_LAT'), crs = 4326)
   
   
   
   contact <- ggplot(data = states) +
     geom_sf()+
-    geom_sf(data = site_runs_sf, aes(fill = HYDRO_CONTACT), shape = 21, size = 5, alpha = 0.8) +
+    geom_sf(data = site_cluster, aes(fill = ANTHRO_NPDES_MAJ_DENS), shape = 21, size = 5, alpha = 0.8) +
     scale_fill_gradient(low = '#ffffe5', high = '#cc4c02')+
     coord_sf(xlim = c(-98, -68), ylim = c(35, 49), expand = FALSE) +
     theme_bw()+
-    guides(fill=guide_colourbar(title="Subsurface contact time (days)"))+
+    guides(fill=guide_colourbar(title="Density of NPDES sites"))+
     ggspatial::annotation_scale(
       location = "tr",
       bar_cols = c("grey60", "white")
@@ -671,6 +677,6 @@ test <- hydro_data %>%
           legend.text = element_text(size=12),
           legend.title = element_text(size=12))
   contact
-  ggsave('04_analysis/figs/Contact.jpeg',height = 7, width = 9, dpi = 500)
+  ggsave('04_analysis/figs/NPDES_Density.jpeg',height = 7, width = 9, dpi = 500)
   
   

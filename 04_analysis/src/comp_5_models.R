@@ -491,8 +491,30 @@ dev.off()
 }
 
   
-  
+#########################################################################
+#Compare two models
 
+two_runs <- rbind(
+read_csv('04_analysis/out/Run_01_230420_All_Features_ensemble_results_2023-04-21.csv') %>%
+  mutate(run = 'No log'),
+read_csv('04_analysis/out/Run_02_230421_All_Features_Discharge_l10_ensemble_results_2023-04-22.csv') %>%
+  mutate(run = 'Log discharge')
+)
+
+two_runs %>%
+  ggplot(aes(x = run, y = Testing_KGE, fill = run))+
+  geom_boxplot()
+
+
+two_runs %>%
+  group_by(run) %>%
+  summarise(med_RMSE = median(Testing_RMSE), med_NSE = median(Testing_NSE), med_PBIAS = median(Testing_PBIAS),
+              med_r = median(Testing_r), med_KGE = median(Testing_KGE))
+
+
+plot(two_runs[two_runs$run == 'No log',]$Testing_KGE, two_runs[two_runs$run != 'No log',]$Testing_KGE, 
+     xlim = c(-1,1), ylim = c(-1,1), xlab = 'KGE No log', ylab = 'KGE Log', main = 'Effect of taking the log of Discharge', las = 1)
+abline(0,1, col = 'red')
 
 
 

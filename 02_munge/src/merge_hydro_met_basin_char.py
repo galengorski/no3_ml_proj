@@ -36,7 +36,7 @@ for i, single_site in enumerate(sites):
     #calculate 7 day moving average
     hydro_data_temp['nitrate_rolling'] = hydro_data_temp['nitrate'].rolling("7D", min_periods = 3, center=False).mean()
     hydro_data_temp['nitrate'] = hydro_data_temp['nitrate_rolling']
-    hydro_data_temp['discharge_l10'] = np.log10(hydro_data_temp['discharge'])
+    hydro_data_temp['discharge_l10'] = np.log10(hydro_data_temp['discharge']+0.01)
     met_data = pd.read_csv('01_fetch/out/met_data/'+single_site+'_met_data.csv',
                            parse_dates = ['date'], index_col = 'date')
     #make sure they have the same length

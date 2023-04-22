@@ -1,7 +1,7 @@
 # features used for predictions  
 #'Baseflow', 'Quickflow'
 #'Nitrate' has got to be in here for now
-feat_list: ['Nitrate','Discharge','Precip','TempMax','TempMin','SolarRad']
+feat_list: ['Nitrate','Discharge_l10','Precip','TempMax','TempMin','SolarRad']
 #are static features used
 static_features_used: False
 #static_features: ['CAT_N97','CAT_CONTACT','CAT_CANALDITCH','CAT_ARTIFICIAL','CAT_BASIN_AREA','CAT_SILTAVE','CAT_CLAYAVE', 'fert_uN_mt',
