@@ -496,14 +496,19 @@ dev.off()
 
 two_runs <- rbind(
 read_csv('04_analysis/out/Run_01_230420_All_Features_ensemble_results_2023-04-21.csv') %>%
-  mutate(run = 'No log'),
+  mutate(run = 'Gloabl No log'),
 read_csv('04_analysis/out/Run_02_230421_All_Features_Discharge_l10_ensemble_results_2023-04-22.csv') %>%
-  mutate(run = 'Log discharge')
+  mutate(run = 'Global Log discharge'),
+read_csv('04_analysis/out/Run_00_Full_230130_ensemble_results_2023-02-24.csv') %>%
+  mutate(run = 'Single-site No log'),
+read_csv('04_analysis/out/Run_01_Baseline_230422_Discharge_l10_ensemble_results_2023-04-23.csv') %>%
+  mutate(run = 'Single-site Log discharge')
 )
 
 two_runs %>%
   ggplot(aes(x = run, y = Testing_KGE, fill = run))+
-  geom_boxplot()
+  geom_boxplot()+
+  ylim(-1,1)
 
 
 two_runs %>%
@@ -512,7 +517,7 @@ two_runs %>%
               med_r = median(Testing_r), med_KGE = median(Testing_KGE))
 
 
-plot(two_runs[two_runs$run == 'No log',]$Testing_KGE, two_runs[two_runs$run != 'No log',]$Testing_KGE, 
+plot(two_runs[two_runs$run == 'Single-site No log',]$Testing_KGE, two_runs[two_runs$run == 'Single-site Log discharge',]$Testing_KGE, 
      xlim = c(-1,1), ylim = c(-1,1), xlab = 'KGE No log', ylab = 'KGE Log', main = 'Effect of taking the log of Discharge', las = 1)
 abline(0,1, col = 'red')
 

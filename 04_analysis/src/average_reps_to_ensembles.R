@@ -23,13 +23,13 @@ library(stringr)
 gh <- '~/Documents/GitHub/no3_ml_proj/'
 gd <- '~/galengorski@berkeley.edu - Google Drive/My Drive/ESDL Postdoc/02_Projects/no3_ml_proj/'
 
-training_dates <- read_csv(file.path('04_analysis/out/train_test_dates.csv'))
+training_dates <- read_csv(file.path(gd, '04_analysis/out/train_test_dates.csv'))
 basin_char <- read_csv(file.path(gh, '04_analysis/out/basin_char_w_clusters_hydroterranes_230421.csv'))
 sites <- basin_char$site_no
 reps <- 10
 
-ss_run_id <- 'Run_00_Full_230130'
-ms_run_id <- 'Run_01_230420_All_Features'
+ss_run_id <- 'Run_01_Baseline_230422_Discharge_l10'
+ms_run_id <- 'Run_02_230421_All_Features_Discharge_l10'
 cl_run_id <- 'Run_06_C_230208'
 ht_run_id <- 'Run_03_HT_230202'
 
@@ -41,11 +41,11 @@ for (i in 1:length(sites)){
   train_end_date <- training_dates %>%
     filter(site == sites[i]) %>%
     pull(train_end_date)
-  site_temp <- read_csv(file.path(paste0(gd,'03_model/out/single_site/',ss_run_id,'/Rep_00'),sites[i],'ModelResults.csv'))[,c("DateTime","Labeled")]%>%
+  site_temp <- read_csv(file.path(paste0(gh,'03_model/out/single_site/',ss_run_id,'/Rep_00'),sites[i],'ModelResults.csv'))[,c("DateTime","Labeled")]%>%
     mutate(Set = if_else(DateTime <= train_end_date,'Training','Testing'))
   for (j in 1:reps){
     rep <- str_pad(j-1, 2, pad = '0')
-    site_rep_temp <- read_csv(file.path(paste0(gd,'03_model/out/single_site/',ss_run_id),paste0('Rep_',rep),sites[i],'ModelResults.csv'))[,"Predicted"]
+    site_rep_temp <- read_csv(file.path(paste0(gh,'03_model/out/single_site/',ss_run_id),paste0('Rep_',rep),sites[i],'ModelResults.csv'))[,"Predicted"]
     site_temp <- cbind(site_temp,site_rep_temp) 
   }
   site_temp_summary <- tibble(Set = site_temp$Set, Labeled = site_temp$Labeled, Predicted_mean = rowMeans(site_temp[grepl( "Predicted" , names( site_temp ) )])) %>%

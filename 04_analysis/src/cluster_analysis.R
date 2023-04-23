@@ -56,13 +56,13 @@ basin_char_clean <- merge(basin_char_clean, site_names, by = 'site_no') %>%
 ############################################
 #Attempt with updated feature importance and using all features available for clustering
 #read in updated feature importance
-feat_imp_u <- read_csv('~/Documents/GitHub/no3_ml_proj/04_analysis/out/multi_site_ensemble_feature_importanceRun_00_Full_230131.csv') %>%
-  filter(!feat %in% c('Discharge','Precip','TempMax','TempMin','SolarRad')) %>%
+feat_imp_u <- read_csv('~/Documents/GitHub/no3_ml_proj/04_analysis/out/multi_site_ensemble_feature_importanceRun_02_230421_All_Features_Discharge_l10.csv') %>%
+  filter(!feat %in% c('Discharge_l10','Precip','TempMax','TempMin','SolarRad')) %>%
   filter(feat_imp_mean > 0.10) %>%
   pull(feat)
 
 #find the cleaned up names of the features with higher feature importances scores
-names_lookup_u <- read_csv('04_analysis/out/basin_char_names_lookup_formatted.csv') %>%
+names_lookup_u <- read_csv('04_analysis/out/basin_char_names_lookup_formatted_230423.csv') %>%
   filter(Names %in% feat_imp_u | !is.na(Calculated)) %>%
   pull(Names_Clean) 
 
@@ -147,9 +147,9 @@ cluster_assig$cluster %>% table()
 #in PCA space
 #and reassign the cluster numbers so that they begin with 1
 cluster_reassig <- cluster_assig %>%
-  mutate(cluster = recode(cluster, '1' = '5', '6' = '1'))
+  mutate(cluster = recode(cluster, '5' = '1', '6' = '5'))
 
-#check to make sure the reassignment worked (cluster 1 should have 15, 2 has 3, 3 has 17, 4 has 5, and 5 has 6)
+#check to make sure the reassignment worked (cluster 1 should have 7, 2 has 3, 3 has 23, 4 has 3, and 5 has 10)
 cluster_reassig$cluster %>% table()
 
 basin_char_clusters <- basin_char_clean %>%
@@ -163,7 +163,7 @@ hydro_terranes <- read_csv('04_analysis/out/basin_char_w_clusters_6_hydro_terran
 clusters_ht <- merge(basin_char_clusters, hydro_terranes, by = 'site_no') %>%
   tibble()
 
-write_csv(clusters_ht, '04_analysis/out/basin_char_w_clusters_hydroterranes_230421.csv')
+write_csv(clusters_ht, '04_analysis/out/basin_char_w_clusters_hydroterranes_230423.csv')
 
 
 
