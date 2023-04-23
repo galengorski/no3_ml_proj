@@ -46,7 +46,7 @@ val_frac: 0.1875
 #testing fraction
 test_frac: 0.25
 #number of features used
-num_features: 53   
+num_features: 43   
 learning_rate: 0.005
 num_epochs: 64
 batch_size: 512
