@@ -24,13 +24,13 @@ gh <- '~/Documents/GitHub/no3_ml_proj/'
 gd <- '~/galengorski@berkeley.edu - Google Drive/My Drive/ESDL Postdoc/02_Projects/no3_ml_proj/'
 
 training_dates <- read_csv(file.path(gd, '04_analysis/out/train_test_dates.csv'))
-basin_char <- read_csv(file.path(gh, '04_analysis/out/basin_char_w_clusters_hydroterranes_230421.csv'))
+basin_char <- read_csv(file.path(gh, '04_analysis/out/basin_char_w_clusters_hydroterranes_230423.csv'))
 sites <- basin_char$site_no
 reps <- 10
 
 ss_run_id <- 'Run_01_Baseline_230422_Discharge_l10'
 ms_run_id <- 'Run_02_230421_All_Features_Discharge_l10'
-cl_run_id <- 'Run_06_C_230208'
+cl_run_id <- 'Run_05_230424_Cluster_Discharge_l10'
 ht_run_id <- 'Run_03_HT_230202'
 
 single_site_run_summary <- data.frame()
