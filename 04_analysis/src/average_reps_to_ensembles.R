@@ -29,9 +29,9 @@ sites <- basin_char$site_no
 reps <- 10
 
 ss_run_id <- 'Run_01_Baseline_230422_Discharge_l10'
-ms_run_id <- 'Run_02_230421_All_Features_Discharge_l10'
+ms_run_id <- 'Run_03_230423_Discharge_l10'
 cl_run_id <- 'Run_05_230424_Cluster_Discharge_l10'
-ht_run_id <- 'Run_03_HT_230202'
+ht_run_id <- 'Run_06_230424_HydroTerrane_Discharge_l10'
 
 single_site_run_summary <- data.frame()
 single_site_all_data <- data.frame()

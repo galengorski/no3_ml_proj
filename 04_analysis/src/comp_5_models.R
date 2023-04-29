@@ -17,13 +17,15 @@ library(tidyverse)
 
 gh <- '~/Documents/GitHub/no3_ml_proj/'
 gd <- '~/galengorski@berkeley.edu - Google Drive/My Drive/ESDL Postdoc/02_Projects/no3_ml_proj/'
-ss_run_id <- 'Run_00_Full_230130'
-ms_run_id <- 'Run_01_230201_Baseline'
-cl_run_id <- 'Run_06_C_230208'
-ht_run_id <- 'Run_03_HT_230202'
-date <- '2023-02-23'
 
-basin_char <- read_csv(file.path(gh, '04_analysis/out/basin_char_w_clusters_hydroterranes_230208.csv'))
+ss_run_id <- 'Run_01_Baseline_230422_Discharge_l10'
+ms_run_id <- 'Run_03_230423_Discharge_l10'
+cl_run_id <- 'Run_05_230424_Cluster_Discharge_l10'
+ht_run_id <- 'Run_06_230424_HydroTerrane_Discharge_l10'
+
+date <- '2023-04-26'
+
+basin_char <- read_csv(file.path(gh, '04_analysis/out/basin_char_w_clusters_hydroterranes_230423.csv'))
 
 ms <- read_csv(file.path(gd,paste0('04_analysis/out/',ms_run_id,'_ensemble_results_',date,'.csv'))) %>%
   relocate(site_no:long, .before = Testing_RMSE) %>%
@@ -62,16 +64,16 @@ write_csv(all_models, file.path(gd, paste0('04_analysis/out/all_models_summary_'
 gh <- '~/Documents/GitHub/no3_ml_proj/'
 gd <- '~/galengorski@berkeley.edu - Google Drive/My Drive/ESDL Postdoc/02_Projects/no3_ml_proj/'
 
-all_models <- read_csv(file.path(gd, paste('04_analysis/out/all_models_summary_2023-02-09.csv')))
+all_models <- read_csv(file.path(gd, paste('04_analysis/out/all_models_summary_2023-04-26.csv')))
 
-basin_char <- read_csv(file.path(gh, '04_analysis/out/basin_char_w_clusters_hydroterranes_230208.csv'))
+basin_char <- read_csv(file.path(gh, '04_analysis/out/basin_char_w_clusters_hydroterranes_230423.csv'))
 sites <- basin_char$site_no
 reps <- 10
 
-ss_run_id <- 'Run_00_Full_230130'
-g_run_id <- 'Run_01_230201_Baseline'
-cl_run_id <- 'Run_06_C_230208'
-ht_run_id <- 'Run_03_HT_230202'
+ss_run_id <- 'Run_01_Baseline_230422_Discharge_l10'
+g_run_id <- 'Run_03_230423_Discharge_l10'
+cl_run_id <- 'Run_05_230424_Cluster_Discharge_l10'
+ht_run_id <- 'Run_06_230424_HydroTerrane_Discharge_l10'
 
 for(j in 1:length(unique(basin_char$site_no))){
 
@@ -98,10 +100,10 @@ for(j in 1:length(unique(basin_char$site_no))){
   
   #single-site
   single_site_run_summary <- data.frame()
-  site_temp <- read_csv(file.path(paste0(gd,'03_model/out/single_site/',ss_run_id,'/Rep_00'),site,'ModelResults.csv'),show_col_types = FALSE)[,c("DateTime","Labeled","Train/Val/Test")]
+  site_temp <- read_csv(file.path(paste0(gh,'03_model/out/single_site/',ss_run_id,'/Rep_00'),site,'ModelResults.csv'),show_col_types = FALSE)[,c("DateTime","Labeled","Train/Val/Test")]
   for (j in 1:reps){
     rep <- str_pad(j-1, 2, pad = '0')
-    site_rep_temp <- read_csv(file.path(paste0(gd,'03_model/out/single_site/',ss_run_id),paste0('Rep_',rep),site,'ModelResults.csv'),show_col_types = FALSE)[,"Predicted"]
+    site_rep_temp <- read_csv(file.path(paste0(gh,'03_model/out/single_site/',ss_run_id),paste0('Rep_',rep),site,'ModelResults.csv'),show_col_types = FALSE)[,"Predicted"]
     site_temp <- cbind(site_temp,site_rep_temp) 
   }
   site_temp$Predicted_mean <- rowMeans(site_temp[grepl( "Predicted" , names( site_temp ) )]) 
@@ -496,19 +498,41 @@ dev.off()
 
 two_runs <- rbind(
 read_csv('04_analysis/out/Run_01_230420_All_Features_ensemble_results_2023-04-21.csv') %>%
-  mutate(run = 'Gloabl No log'),
-read_csv('04_analysis/out/Run_02_230421_All_Features_Discharge_l10_ensemble_results_2023-04-22.csv') %>%
-  mutate(run = 'Global Log discharge'),
+  mutate(run = 'a-Gloabl No log', cluster = NA),
+read_csv('04_analysis/out/Run_03_230423_Discharge_l10_ensemble_results_2023-04-26.csv') %>%
+  mutate(run = 'b-Global Log discharge', cluster = NA),
 read_csv('04_analysis/out/Run_00_Full_230130_ensemble_results_2023-02-24.csv') %>%
-  mutate(run = 'Single-site No log'),
-read_csv('04_analysis/out/Run_01_Baseline_230422_Discharge_l10_ensemble_results_2023-04-23.csv') %>%
-  mutate(run = 'Single-site Log discharge')
+  mutate(run = 'c-Single-site No log', cluster = NA),
+read_csv('04_analysis/out/Run_01_Baseline_230422_Discharge_l10_ensemble_results_2023-04-26.csv') %>%
+  mutate(run = 'd-Single-site Log discharge', cluster = NA),
+read_csv('04_analysis/out/Run_06_C_230208_ensemble_results_2023-02-24.csv') %>%
+  mutate(run = 'e-Cluster No log') %>%
+  rename('lat' = 'PHYS_LAT', 'long' = 'PHYS_LONG'),
+read_csv('04_analysis/out/Run_05_230424_Cluster_Discharge_l10_ensemble_results_2023-04-26.csv') %>%
+  mutate(run = 'f-Cluster Log discharge') %>%
+  rename('lat' = 'PHYS_LAT', 'long' = 'PHYS_LONG'),
+read_csv('04_analysis/out/Run_03_HT_230202_ensemble_results_2023-02-24.csv') %>%
+  mutate(run = 'g-Hydro Terrane No log', cluster = NA) %>%
+  rename('lat' = 'PHYS_LAT', 'long' = 'PHYS_LONG'),
+read_csv('04_analysis/out/Run_06_230424_HydroTerrane_Discharge_l10_ensemble_results_2023-04-26.csv') %>%
+  mutate(run = 'h-Hydro Terrane Log discharge', cluster = NA) %>%
+  rename('lat' = 'PHYS_LAT', 'long' = 'PHYS_LONG')
+
+
 )
 
 two_runs %>%
-  ggplot(aes(x = run, y = Testing_KGE, fill = run))+
+  ggplot(aes(x = run, y = Testing_PBIAS, fill = run))+
   geom_boxplot()+
-  ylim(-1,1)
+  ylim(-0,100)+
+  scale_fill_manual(values = c('#00f5d4','#00f5d4','#00bbf9','#00bbf9','#ff595e','#ff595e','#ffca3a','#ffca3a'))+
+  theme(legend.key.height = unit(1, 'cm'), 
+        legend.key.width = unit(0.75, 'cm'),
+        legend.title = element_text(size=14), 
+        legend.text = element_text(size=10),
+        axis.text.y = element_text(size = 12),
+        axis.text.x = element_text(size = 12),
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
 
 two_runs %>%
@@ -517,7 +541,7 @@ two_runs %>%
               med_r = median(Testing_r), med_KGE = median(Testing_KGE))
 
 
-plot(two_runs[two_runs$run == 'Single-site No log',]$Testing_KGE, two_runs[two_runs$run == 'Single-site Log discharge',]$Testing_KGE, 
+plot(two_runs[two_runs$run == 'Cluster No log',]$Testing_KGE, two_runs[two_runs$run == 'Cluster Log discharge',]$Testing_KGE, 
      xlim = c(-1,1), ylim = c(-1,1), xlab = 'KGE No log', ylab = 'KGE Log', main = 'Effect of taking the log of Discharge', las = 1)
 abline(0,1, col = 'red')
 
