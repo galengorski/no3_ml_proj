@@ -61,6 +61,14 @@ feat_imp_u <- read_csv('~/Documents/GitHub/no3_ml_proj/04_analysis/out/multi_sit
   filter(feat_imp_mean > 0.10) %>%
   pull(feat)
 
+names_lookup_u <- read_csv('04_analysis/out/basin_char_names_lookup_formatted_230423.csv')
+names_lookup_u[names_lookup_u$Names %in% feat_imp_u,]$Used_Modeling <- 'Y'
+names_lookup_u[!(names_lookup_u$Names %in% feat_imp_u),]$Used_Modeling <- NA
+names_lookup_u[names_lookup_u$Names %in% feat_imp_u,]$Used_Clustering <- 'Y'
+names_lookup_u[!(names_lookup_u$Names %in% feat_imp_u),]$Used_Clustering <- NA
+write_csv(names_lookup_u, '04_analysis/out/basin_char_names_lookup_formatted_230423.csv')
+
+
 #find the cleaned up names of the features with higher feature importances scores
 names_lookup_u <- read_csv('04_analysis/out/basin_char_names_lookup_formatted_230423.csv') %>%
   filter(Names %in% feat_imp_u | !is.na(Calculated)) %>%

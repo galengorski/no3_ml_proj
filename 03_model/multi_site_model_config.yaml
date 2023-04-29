@@ -5,7 +5,7 @@ feat_list: ['Nitrate','Discharge_l10','Precip','TempMax','TempMin','SolarRad']
 static_features_used: True
 static_features: ['TOT_BASIN_AREA', 
                     #
-                    'TOT_BASIN_SLOPE', 
+                    #'TOT_BASIN_SLOPE', 
                     'lat', 
                     #'long', 
                     #'TOT_STREAM_SLOPE', 
@@ -14,7 +14,7 @@ static_features: ['TOT_BASIN_AREA',
                     'TOT_HGA', 'TOT_HGAD', 'TOT_HGB', 
                     #
                     #'TOT_HGBC', 
-                    'TOT_HGBD', 'TOT_HGC', 
+                    'TOT_HGBD', 'TOT_HGC',
                     #'TOT_HGCD', 
                     #
                     #'TOT_HGD', 
@@ -36,7 +36,8 @@ static_features: ['TOT_BASIN_AREA',
                     'fert_uN_mt_sqkm', 
                     #
                     #'NLCD_DEV', 
-                    'NLCD_FOR', 'NLCD_AG', 'NLCD_WTLND']
+                    'NLCD_FOR', 'NLCD_AG']#, 
+                    #'NLCD_WTLND']
 #sequence length
 seq_len: 180
 #train fraction
@@ -46,7 +47,7 @@ val_frac: 0.1875
 #testing fraction
 test_frac: 0.25
 #number of features used
-num_features: 43   
+num_features: 41   
 learning_rate: 0.005
 num_epochs: 64
 batch_size: 512

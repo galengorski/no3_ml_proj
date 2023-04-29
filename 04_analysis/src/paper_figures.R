@@ -1201,9 +1201,11 @@ plot_grid(rmse_clust, legend, nse_clust, NULL, nrow = 2, rel_widths = c(1,.3,1,.
 ggsave('04_analysis/figs/RMSE_NSE_by_cluster.jpeg', height = 6, width = 10, dpi = 300)
 
 
+all_models <- read_csv('04_analysis/out/all_models_summary_2023-04-26.csv')
 #summary table of four models
 all_models %>%
   group_by(run) %>%
+  filter(!(site_no == '05451210'|site_no == '05464500')) %>%
   summarise(med_RMSE = median(Testing_RMSE), med_NSE = median(Testing_NSE), med_PBIAS = median(Testing_PBIAS),
             med_r = median(Testing_r), med_KGE = median(Testing_KGE))
 
