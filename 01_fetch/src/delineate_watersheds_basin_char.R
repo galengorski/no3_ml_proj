@@ -31,7 +31,7 @@ library(climateR)
 
 site_data <- read_csv('01_fetch/out/site_list_220507.csv')
 all_data <- read_csv('01_fetch/out/hydro_filled_220128.csv')
-fertilizer_data <- read.table('01_fetch/in/Stewart_Fertilizer/2012_catchment_fert_use_estimates_N_P.txt', header = TRUE, sep = ',')
+fertilizer_data <- read.table('~/galengorski@berkeley.edu - Google Drive/My Drive/ESDL Postdoc/02_Projects/no3_ml_proj/01_fetch/in/Stewart_Fertilizer/2012_catchment_fert_use_estimates_N_P.txt', header = TRUE, sep = ',')
 
 #i = 2
 
@@ -94,39 +94,52 @@ for (i in 1:nrow(site_data)){
   
   #### MET DATA
   #GridMET data
-  # startTime <- Sys.time()
-  # #download grid met data for basin
-  # gm_extent <- getGridMET(test$basin, param = c('prcp','tmin','tmax','srad'), startDate = single_site$Date[1], endDate = single_site$Date[nrow(single_site)])
-  # #convert raster layers to brick
-  # gm_brick <- brick(gm_extent)
-  # #getGridMET returns the raster extent so clip out the basin from the extent
-  # gm_basin_mask <- mask(gm_brick, test$basin, maskValue = NA)
-  # #take the daily mean of all parameters
-  # n <- cellStats(gm_basin_mask[[names(gm_basin_mask)]], mean)
-  # #clean up data
-  # mean_vals <- tibble(date = names(n), value = unname(n)) %>%
-  #   separate(date, c('year','month','day','variable')) %>%
-  #   mutate(year = gsub("X", "", year)) %>%
-  #   mutate(date = make_date(year, month, day)) %>%
-  #   dplyr::select(date, value, variable) %>%
-  #   pivot_wider(names_from = variable, values_from = value) %>%
-  #   mutate(prcp = `1`, tmin = `2`, tmax = `3`, srad = `4`) %>%
-  #   dplyr::select(date, prcp, srad, tmin, tmax)
-  # #write to file
-  # write_csv(mean_vals, paste0('01_fetch/out/met_data/',site_data$site_no[i],'_met_data.csv'))
-  # 
-  # #calculate time
-  # endTime <- Sys.time()  
-  # met_time = endTime-startTime
-  # #print time
-  # print(paste0('Site ',i,' of ',nrow(site_data), '| Met data saved: '))
-  # print(met_time)
-  # 
-  # #calculate total time
-  # iter_end <- Sys.time()
-  # iter_time = iter_end-iter_start
-  # #print total time
-  # print(paste0('Site ',i,' of ',nrow(site_data), '| Total time: '))
-  # print(iter_time)
-  # 
+  startTime <- Sys.time()
+  #download grid met data for basin
+  gm_extent <- getGridMET(test$basin, varname = c('pr','tmmn', 'tmmx','srad'),
+                          startDate = '2010-01-01', endDate = '2021-12-31')
+                          #startDate = single_site$Date[1], endDate = single_site$Date[nrow(single_site)])
+  #convert raster layers to brick
+  gm_stack <- brick(c(gm_extent$precipitation_amount,
+                    gm_extent$daily_mean_shortwave_radiation_at_surface,
+                    gm_extent$daily_minimum_temperature,
+                    gm_extent$daily_maximum_temperature))
+  #getGridMET returns the raster extent so clip out the basin from the extent
+  gm_basin_mask <- mask(gm_stack, test$basin, maskValue = NA)
+  #take the daily mean of all parameters
+  n <- cellStats(gm_basin_mask[[names(gm_basin_mask)]], mean)
+  #clean up data
+  mean_vals <- tibble(date = names(n), value = unname(n)) %>%
+    separate(date, c('variable','year','month','day')) %>%
+    mutate(date = make_date(year, month, day)) %>%
+    dplyr::select(date, value, variable) %>%
+    pivot_wider(names_from = variable, values_from = value) %>%
+    rename('prcp' = 'pr', 'tmin' = 'tmmn', 'tmax' = 'tmmx', 'srad' = 'srad') %>%
+    dplyr::select(date, prcp, srad, tmin, tmax)
+  
+  jpeg(paste0("01_fetch/out/met_data_figs/",site_data$site_no[i],'_met_fig.jpeg'),width = 1080, height = 1080, units = "px", pointsize = 12)
+  par(mfrow = c(4,1), mgp = c(3,1,0))
+  plot(mean_vals$date, mean_vals$prcp, typ = 'l', col = '#0a9396', ylab = 'Precipitation (mm)')
+  plot(mean_vals$date, mean_vals$srad, typ = 'l', col = '#ee9b00', ylab = 'Solar Radiation (W/m2)')
+  plot(mean_vals$date, mean_vals$tmin, typ = 'l', col = '#ca6702', ylab = 'Minimum Temperature (K)')
+  plot(mean_vals$date, mean_vals$tmax, typ = 'l', col = '#ae2012', ylab = 'Maximum Temperature (K)')
+  dev.off()
+  
+  #write to file
+  write_csv(mean_vals, paste0('01_fetch/out/met_data/',site_data$site_no[i],'_met_data.csv'))
+
+  #calculate time
+  endTime <- Sys.time()
+  met_time = endTime-startTime
+  #print time
+  print(paste0('Site ',i,' of ',nrow(site_data), '| Met data saved: '))
+  print(met_time)
+
+  #calculate total time
+  iter_end <- Sys.time()
+  iter_time = iter_end-iter_start
+  #print total time
+  print(paste0('Site ',i,' of ',nrow(site_data), '| Total time: '))
+  print(iter_time)
+
 }

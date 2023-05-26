@@ -27,7 +27,7 @@ hydro_data = pd.read_csv('01_fetch/out/hydro_filled_220128.csv',
 site_info = pd.read_csv('01_fetch/out/site_list_220507.csv', dtype = {'site_no':str})
 sites = site_info.site_no.unique()
 
-model_input_nc = netCDF4.Dataset('02_munge/out/model_input_230420.nc',mode='w')
+model_input_nc = netCDF4.Dataset('02_munge/out/model_input_230526.nc',mode='w')
 model_input_nc.title='Modeling input data'
 
 for i, single_site in enumerate(sites):

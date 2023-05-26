@@ -5,39 +5,42 @@ feat_list: ['Nitrate','Discharge_l10','Precip','TempMax','TempMin','SolarRad']
 static_features_used: True
 static_features: ['TOT_BASIN_AREA', 
                     #
-                    #'TOT_BASIN_SLOPE', 
+                    'TOT_BASIN_SLOPE', 
                     'lat', 
-                    #'long', 
-                    #'TOT_STREAM_SLOPE', 
+                    #
+                    'long', 
+                    #
+                    'TOT_STREAM_SLOPE', 
                     'TOT_STREAM_LENGTH', 'TOT_STRM_DENS', 
                     'TOT_CANALDITCH', 'TOT_ARTIFICIAL', 
                     'TOT_HGA', 'TOT_HGAD', 'TOT_HGB', 
                     #
-                    #'TOT_HGBC', 
+                    'TOT_HGBC', 
                     'TOT_HGBD', 'TOT_HGC',
-                    #'TOT_HGCD', 
                     #
-                    #'TOT_HGD', 
+                    'TOT_HGCD', 
+                    #
+                    'TOT_HGD', 
                     'TOT_N97', 
                     'TOT_BFI', 'TOT_CONTACT', 'TOT_RECHG', 
                     'TOT_WB5100_ANN', 'TOT_CWD', 'TOT_ET', 'TOT_RH', 'TOT_WDANN', 'TOT_PPT7100_ANN', 
                     'TILE_DRAIN', 'TOT_NPDES_MAJ', 'TOT_NPDES_MAJ_DENS', 'TOT_LAKEPOND', 
                     #
-                    #'TOT_RESERVOIR', 
-                    #'TOT_SRL55AG', 
+                    'TOT_RESERVOIR', 
                     #
-                    #'TOT_MAJOR2013', 
+                    'TOT_SRL55AG', 
+                    #
+                    'TOT_MAJOR2013', 
                     'TOT_NDAMS2013', 'TOT_NID_STORAGE2013', 
                     #
-                    #'TOT_NORM_STORAGE2013', 
-                    'DTW', 'TRANSM', 'UNSAT_TT', 'WCON', 'NO3_DOM', 
-                    #
+                    'TOT_NORM_STORAGE2013', 
+                    'DTW', 'TRANSM', 'UNSAT_TT', 'WCON', 'NO3_DOM',
                     'NO3_PUB', 
                     'fert_uN_mt_sqkm', 
                     #
-                    #'NLCD_DEV', 
-                    'NLCD_FOR', 'NLCD_AG']#, 
-                    #'NLCD_WTLND']
+                    'NLCD_DEV', 
+                    'NLCD_FOR', 'NLCD_AG', 
+                    'NLCD_WTLND']
 #sequence length
 seq_len: 180
 #train fraction
@@ -47,7 +50,7 @@ val_frac: 0.1875
 #testing fraction
 test_frac: 0.25
 #number of features used
-num_features: 41   
+num_features: 53   
 learning_rate: 0.005
 num_epochs: 64
 batch_size: 512

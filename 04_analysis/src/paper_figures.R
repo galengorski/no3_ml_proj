@@ -1205,7 +1205,7 @@ all_models <- read_csv('04_analysis/out/all_models_summary_2023-04-26.csv')
 #summary table of four models
 all_models %>%
   group_by(run) %>%
-  filter(!(site_no == '05451210'|site_no == '05464500')) %>%
+  #filter(!(site_no == '05451210'|site_no == '05464500')) %>%
   summarise(med_RMSE = median(Testing_RMSE), med_NSE = median(Testing_NSE), med_PBIAS = median(Testing_PBIAS),
             med_r = median(Testing_r), med_KGE = median(Testing_KGE))
 
@@ -1568,22 +1568,24 @@ site_temp_summary %>%
 ggsave(paste0('04_analysis/figs/site_chemographs/ss_g_compare_',site_g,'.png'), width = 10, height = 3.5)
 }
 
-
+basin_char <- read_csv(file.path(gh, '04_analysis/out/basin_char_w_clusters_hydroterranes_230423.csv'))
+clusters_ht <- basin_char
 #cluster barplots static characteristics
+cols_ht <- rev(paletteer_d("Polychrome::green_armytage"))
 
 for(i in 3:57){
 
   char <- colnames(clusters_ht)[i]
   
   char_plot <- clusters_ht %>%
-  group_by(cluster) %>%
+  group_by(hydro_terrane) %>%
   summarise(across(PHYS_BASIN_AREA:CHEM_CQ_SLOPE,median)) %>%
-  mutate(Cluster = factor(cluster)) %>%
+  mutate(ht = factor(hydro_terrane)) %>%
     rename("to_plot" = char) %>%
-  ggplot(aes(x = Cluster, y = to_plot, fill = Cluster))+
+  ggplot(aes(x = ht, y = to_plot, fill = ht))+
   geom_bar(stat = 'identity', color = 'black')+
   ggtitle(char)+
-  scale_fill_manual(values = c(cols))+
+  scale_fill_manual(values = c(cols_ht))+
   theme_bw()+
   theme(legend.text = element_text(size = 12, color = 'black'),
         legend.title = element_text(size = 12, color = 'black'),
@@ -1595,6 +1597,35 @@ for(i in 3:57){
   ylab(char)
   
   char_plot
-  ggsave(paste0('04_analysis/figs/cluster_attributes/',char,'.png'), height = 3, width = 4)
+  ggsave(paste0('~/Documents/GitHub/no3_ml_proj/04_analysis/figs/ht_attributes/',char,'.png'), height = 3, width = 4)
 
 }
+
+
+char <- 'GW_DTW'
+
+basin_char %>% filter(cluster == 1) %>% select(site_no, !!char)
+
+basin_char[[char]] %>% summary()
+
+
+site_info <- read_csv('04_analysis//out/basin_char_w_clusters_hydroterranes_230423.csv')
+
+all_models <- read_csv('04_analysis/out/all_models_summary_2023-04-26.csv') %>%
+  left_join(site_info, by = c('site_no' = 'site_no')) %>%
+  dplyr::select(site_no, run, cluster.x, hydro_terrane.x, Testing_KGE, CHEM_CQ_SLOPE)
+
+all_models %>%
+  filter(run == 'Hydro terrane') %>%
+  group_by(hydro_terrane.x) %>%
+  summarise(cq = sd(CHEM_CQ_SLOPE), kge = median(Testing_KGE)) %>%
+  ggplot(aes(x = cq, y = kge, fill = hydro_terrane.x)) +
+  geom_point(shape = 21, size = 5)
+
+
+
+all_models %>%
+  filter(run == 'Single-site') %>%
+  ggplot(aes(x = abs(CHEM_CQ_SLOPE), y = Testing_KGE))+
+  geom_point()+
+  ylim(0,1)

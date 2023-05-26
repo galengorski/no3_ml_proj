@@ -57,16 +57,17 @@ basin_char_clean <- merge(basin_char_clean, site_names, by = 'site_no') %>%
 #Attempt with updated feature importance and using all features available for clustering
 #read in updated feature importance
 feat_imp_u <- read_csv('~/Documents/GitHub/no3_ml_proj/04_analysis/out/multi_site_ensemble_feature_importanceRun_02_230421_All_Features_Discharge_l10.csv') %>%
-  filter(!feat %in% c('Discharge_l10','Precip','TempMax','TempMin','SolarRad')) %>%
+  filter(!feat %in% c('Discharge_l10','Precip','TempMax','TempMin','SolarRad','TOT_SRL55AG')) %>%
   filter(feat_imp_mean > 0.10) %>%
   pull(feat)
 
-names_lookup_u <- read_csv('04_analysis/out/basin_char_names_lookup_formatted_230423.csv')
-names_lookup_u[names_lookup_u$Names %in% feat_imp_u,]$Used_Modeling <- 'Y'
-names_lookup_u[!(names_lookup_u$Names %in% feat_imp_u),]$Used_Modeling <- NA
-names_lookup_u[names_lookup_u$Names %in% feat_imp_u,]$Used_Clustering <- 'Y'
-names_lookup_u[!(names_lookup_u$Names %in% feat_imp_u),]$Used_Clustering <- NA
-write_csv(names_lookup_u, '04_analysis/out/basin_char_names_lookup_formatted_230423.csv')
+#modify names lookup if needed
+# names_lookup_u <- read_csv('04_analysis/out/basin_char_names_lookup_formatted_230423.csv')
+# names_lookup_u[names_lookup_u$Names %in% feat_imp_u,]$Used_Modeling <- 'Y'
+# names_lookup_u[!(names_lookup_u$Names %in% feat_imp_u),]$Used_Modeling <- NA
+# names_lookup_u[names_lookup_u$Names %in% feat_imp_u,]$Used_Clustering <- 'Y'
+# names_lookup_u[!(names_lookup_u$Names %in% feat_imp_u),]$Used_Clustering <- NA
+# write_csv(names_lookup_u, '04_analysis/out/basin_char_names_lookup_formatted_230423.csv')
 
 
 #find the cleaned up names of the features with higher feature importances scores
