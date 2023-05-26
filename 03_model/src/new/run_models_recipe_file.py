@@ -13,8 +13,8 @@ import lstm_modeling_functions as lmf
 import expected_gradients_functions as egf
 #%%
 #run multi_site models
-#run_config_loc = '03_model/multi_site_run_config.yaml'
-#lmf.wrapper_run_multi_site_model_c(run_config_loc)
+run_config_loc = '03_model/multi_site_run_config.yaml'
+lmf.wrapper_run_multi_site_model_c(run_config_loc)
 
 #%%
 #run_single_site_models
@@ -27,8 +27,8 @@ import expected_gradients_functions as egf
 #run_config_loc = '03_model/multi_site_run_config.yaml'
 #lmf.wrapper_run_cluster_model(run_config_loc)
 #%%
-run_config_loc = '03_model/multi_site_run_config.yaml'
-lmf.wrapper_run_hydroterrane_model(run_config_loc)
+#run_config_loc = '03_model/multi_site_run_config.yaml'
+#lmf.wrapper_run_hydroterrane_model(run_config_loc)
 #%% Train out of sample models, multi-site model must be trained first and the 
 #train_oos_exp: parameter must be set to True in 'multi_site_run_config.yaml'
 #run_config_loc = '03_model/multi_site_run_config.yaml'
