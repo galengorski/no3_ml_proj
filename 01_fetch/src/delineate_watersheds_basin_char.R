@@ -35,12 +35,11 @@ fertilizer_data <- read.table('~/galengorski@berkeley.edu - Google Drive/My Driv
 
 #i = 2
 
-for (i in 1:nrow(site_data)){
+for (i in 3:nrow(site_data)){
   iter_start <- Sys.time()
   single_site <- all_data %>%
     filter(site_no == site_data$site_no[i])
-  
-  
+
   #### DRAINAGE AREA
   startTime <- Sys.time()
   # mapviewOptions(basemaps = c("Esri.WorldImagery"))
@@ -97,8 +96,8 @@ for (i in 1:nrow(site_data)){
   startTime <- Sys.time()
   #download grid met data for basin
   gm_extent <- getGridMET(test$basin, varname = c('pr','tmmn', 'tmmx','srad'),
-                          startDate = '2010-01-01', endDate = '2021-12-31')
-                          #startDate = single_site$Date[1], endDate = single_site$Date[nrow(single_site)])
+                          #startDate = '2010-01-01', endDate = '2021-12-31')
+                          startDate = single_site$Date[1], endDate = single_site$Date[nrow(single_site)])
   #convert raster layers to brick
   gm_stack <- brick(c(gm_extent$precipitation_amount,
                     gm_extent$daily_mean_shortwave_radiation_at_surface,

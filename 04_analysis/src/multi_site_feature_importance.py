@@ -50,7 +50,7 @@ def calc_permutation_feature_importance(model, concat_model_data, feat_list):
     preds_original,labs_original,mse_original = model.report_mse(train_val_dataset)
     #fi_ls = []
     feat_imp_df = pd.DataFrame()
-    for i in range(2):#range(len(feat_list)-1): 
+    for i in range(len(feat_list)-1): 
         print(feat_list[i+1])
         x_hypothesis = concat_model_data['train_val_x'].detach().clone()
         var_range = torch.quantile(x_hypothesis[:,:,i].flatten(), torch.tensor([.1,.9]))
@@ -88,7 +88,7 @@ def calc_permutation_feature_importance(model, concat_model_data, feat_list):
 #%%calculate feature importance
 def calc_feature_importance_reps(model_run_id, hidden_size, seq_len, num_layers, dropout, learning_rate, weight_decay, concat_model_data, feat_list, n_reps):
     feat_imp_reps = pd.DataFrame()
-    for i in range(2):#range(n_reps):
+    for i in range(n_reps):
     # initialize the model
         print('Calculating feature importance rep '+str(i+1))
         model = lmf.LSTM_layer(num_features, hidden_size, seq_len, num_layers, dropout, learning_rate, weight_decay)
