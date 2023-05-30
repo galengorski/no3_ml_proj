@@ -56,10 +56,13 @@ basin_char_clean <- merge(basin_char_clean, site_names, by = 'site_no') %>%
 ############################################
 #Attempt with updated feature importance and using all features available for clustering
 #read in updated feature importance
-feat_imp_u <- read_csv('~/Documents/GitHub/no3_ml_proj/04_analysis/out/multi_site_ensemble_feature_importanceRun_02_230421_All_Features_Discharge_l10.csv') %>%
+#230529 sticking with a 0.2 threshold so that fertilizer is included
+feat_imp_u <- read_csv('~/Documents/GitHub/no3_ml_proj/04_analysis/out/multi_site_ensemble_feature_importanceRun_00_Full_230526.csv') %>%
+  filter(site == 'all_sites') %>%
   filter(!feat %in% c('Discharge_l10','Precip','TempMax','TempMin','SolarRad','TOT_SRL55AG')) %>%
-  filter(feat_imp_mean > 0.10) %>%
+  filter(feat_imp_mean > 0.2) %>%
   pull(feat)
+
 
 #modify names lookup if needed
 # names_lookup_u <- read_csv('04_analysis/out/basin_char_names_lookup_formatted_230423.csv')
@@ -86,7 +89,7 @@ rownames(basin_char_scaled_u) <- basin_char_clean$site_no
 basin_char_cl_u <- clValid(basin_char_scaled_u, nClust = 2:8, clMethods = c('kmeans',"hierarchical"), validation = c('internal','stability'))
 
 #choosing 6 clusters here
-cluster_assignment_all_u <- basin_char_cl_u@clusterObjs$kmeans$`6`$cluster
+cluster_assignment_all_u <- basin_char_cl_u@clusterObjs$kmeans$`5`$cluster
 
 
 #plot PCA to view how similar clusters are
@@ -155,8 +158,8 @@ cluster_assig$cluster %>% table()
 #assign site 1 to a cluster, based on the PCA we assign it to cluster 5 which is closest to it
 #in PCA space
 #and reassign the cluster numbers so that they begin with 1
-cluster_reassig <- cluster_assig %>%
-  mutate(cluster = recode(cluster, '5' = '1', '6' = '5'))
+#cluster_reassig <- cluster_assig %>%
+#  mutate(cluster = recode(cluster, '5' = '1', '6' = '5'))
 
 #check to make sure the reassignment worked (cluster 1 should have 7, 2 has 3, 3 has 23, 4 has 3, and 5 has 10)
 cluster_reassig$cluster %>% table()
@@ -175,7 +178,7 @@ clusters_ht <- merge(basin_char_clusters, hydro_terranes, by = 'site_no') %>%
 write_csv(clusters_ht, '04_analysis/out/basin_char_w_clusters_hydroterranes_230423.csv')
 
 
-
+old_cl <- read_csv('04_analysis/out/basin_char_w_clusters_hydroterranes_230423.csv')
 
 
 #######################################################################################
