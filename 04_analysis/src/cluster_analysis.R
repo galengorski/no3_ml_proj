@@ -162,12 +162,12 @@ cluster_assig$cluster %>% table()
 #  mutate(cluster = recode(cluster, '5' = '1', '6' = '5'))
 
 #check to make sure the reassignment worked (cluster 1 should have 7, 2 has 3, 3 has 23, 4 has 3, and 5 has 10)
-cluster_reassig$cluster %>% table()
+#cluster_reassig$cluster %>% table()
 
 basin_char_clusters <- basin_char_clean %>%
   dplyr::select(!`...1`) %>%
   relocate(station_nm, .after = site_no) %>%
-  left_join(cluster_reassig[,c('site_no','cluster')])
+  left_join(cluster_assig[,c('site_no','cluster')])
   
 hydro_terranes <- read_csv('04_analysis/out/basin_char_w_clusters_6_hydro_terranes.csv') %>%
   dplyr::select(site_no, hydro_terrane)
@@ -175,10 +175,7 @@ hydro_terranes <- read_csv('04_analysis/out/basin_char_w_clusters_6_hydro_terran
 clusters_ht <- merge(basin_char_clusters, hydro_terranes, by = 'site_no') %>%
   tibble()
 
-write_csv(clusters_ht, '04_analysis/out/basin_char_w_clusters_hydroterranes_230423.csv')
-
-
-old_cl <- read_csv('04_analysis/out/basin_char_w_clusters_hydroterranes_230423.csv')
+write_csv(clusters_ht, '04_analysis/out/basin_char_w_clusters_hydroterranes_230529.csv')
 
 
 #######################################################################################

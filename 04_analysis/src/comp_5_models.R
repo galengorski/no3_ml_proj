@@ -19,13 +19,13 @@ gh <- '~/Documents/GitHub/no3_ml_proj/'
 gd <- '~/galengorski@berkeley.edu - Google Drive/My Drive/ESDL Postdoc/02_Projects/no3_ml_proj/'
 
 ss_run_id <- 'Run_01_Baseline_230422_Discharge_l10'
-ms_run_id <- 'Run_03_230423_Discharge_l10'
-cl_run_id <- 'Run_05_230424_Cluster_Discharge_l10'
+ms_run_id <- 'Run_01_multisite_230529'
+cl_run_id <- 'Run_02_cluster_230530'
 ht_run_id <- 'Run_06_230424_HydroTerrane_Discharge_l10'
 
-date <- '2023-04-26'
+date <- '2023-05-31'
 
-basin_char <- read_csv(file.path(gh, '04_analysis/out/basin_char_w_clusters_hydroterranes_230423.csv'))
+basin_char <- read_csv(file.path(gh, '04_analysis/out/basin_char_w_clusters_hydroterranes_230529.csv'))
 
 ms <- read_csv(file.path(gd,paste0('04_analysis/out/',ms_run_id,'_ensemble_results_',date,'.csv'))) %>%
   relocate(site_no:long, .before = Testing_RMSE) %>%
@@ -52,7 +52,10 @@ ht <- read_csv(file.path(gd,paste0('04_analysis/out/',ht_run_id,'_ensemble_resul
   relocate(run:cluster, .before = PHYS_LAT)
 
 
-all_models <- rbind(ss, ms, cl, ht) %>%
+all_models <- rbind(#ss, 
+  ms, cl#, 
+  #ht
+  ) %>%
   mutate(run = factor(run, levels = c("Single-site","Clustered","Hydro terrane","global")))
 
 
